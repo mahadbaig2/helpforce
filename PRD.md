@@ -4,7 +4,7 @@
 
 Build an offline capable, local demonstration of an official document approval workflow. A Clerk authors and submits a document, an Officer reviews it, and a Senior Officer makes the final decision. The experience must make the next action obvious, show why a document was returned, protect irreversible decisions, and leave a readable account of what happened. This is a frontend take home with a realistic mock API, not a production identity or storage system.
 
-The source brief is `C:\Mahad\Helpforce\Helpforce AI Take-Home Frontend Engineer.pdf`. This document records our proposed implementation decisions alongside its requirements. If a choice below conflicts with the brief, the brief wins. The eventual submission README is a separate artifact limited to one page.
+The source brief was supplied separately to the development team; this PRD captures its functional requirements so a repository clone remains usable without that local PDF. This document also records proposed implementation decisions. If a choice below conflicts with the original brief, the brief wins. The eventual submission README is a separate artifact limited to one page.
 
 ## People and outcomes
 
@@ -68,6 +68,7 @@ The four persisted statuses are Pending Officer, Pending Senior Officer, Returne
 - Label the result `AI-generated summary` and visually separate it from the official document. Each summary point links to a specific source paragraph or span in the body and moves focus/scroll to it. A point must not invent a claim without a source span.
 - The request runs asynchronously so the document and other controls stay usable. Show progress, a clear retry action on failure, and preserve the original body and PDF regardless of summary state. Log every request in audit history.
 - Approval always requires the full document review acknowledgment and confirmation. The summary cannot satisfy that acknowledgment automatically. Explain this choice in the submission README.
+- Verify that requesting or viewing a summary does not enable approval, and that a conflict clears any earlier review acknowledgment. This is a declaration by the reviewer, not proof of reading.
 
 ## Mock data and API contract
 
@@ -76,6 +77,7 @@ The four persisted statuses are Pending Officer, Pending Senior Officer, Returne
 - Mutations require an expected version. A stale version or changed status returns `409`; an unauthorized role/owner returns `403`; a missing session returns `401`. Return structured error codes and plain language messages. Successful mutations increment the version and append an audit event atomically within the mock store.
 - Document whether edits survive server restart. In-memory seeded state is acceptable for the exercise, but attachments and document records must stay consistent during a running session. If a local file store is used, keep generated data out of Git and include a reset path for demos.
 - Provide a deliberate way to demonstrate upload failure and conflict/error states during evaluation, without relying on an external service.
+- The Git repository is public. The final submission should link to it and be emailed to `usman@helpforce.ai` by the candidate; do not send email automatically.
 
 ## Quality and acceptance criteria
 

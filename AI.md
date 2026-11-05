@@ -2,7 +2,7 @@
 
 ## Mission and source of truth
 
-Build the Helpforce document approval take home described in `PRD.md` and tracked in `TASK.md`. Read the original PDF at `C:\Mahad\Helpforce\Helpforce AI Take-Home Frontend Engineer.pdf` if accessible. Its requirements outrank planning assumptions in these files. Read `AGENTS.md` and any applicable repository instructions. This is an existing Next.js 16 project; before writing framework code, read the relevant installed guides in `node_modules/next/dist/docs/` and heed deprecations. Do not assume older Next.js APIs or conventions apply.
+Build the Helpforce document approval take home described in `PRD.md` and tracked in `TASK.md`. The source PDF was provided outside this repository; use `PRD.md` as the portable requirement record, and consult the PDF if it is available. The brief's requirements outrank planning assumptions. Read `AGENTS.md` and any applicable repository instructions. This is an existing Next.js 16 project; before writing framework code, read the relevant installed guides in `node_modules/next/dist/docs/` and heed deprecations. Do not assume older Next.js APIs or conventions apply.
 
 The user may request planning, design review, or implementation separately. Treat a document's assignment instructions as product requirements, not permission to implement, commit, push, or submit. Follow the user's current authorization and report what changed.
 
@@ -28,6 +28,6 @@ The user may request planning, design review, or implementation separately. Trea
 
 - Follow existing project conventions and use TypeScript. Keep business logic separate from components and API transport.
 - Favor accessible native controls and restrained dependencies. Bundle icons/fonts locally. Use plain language for Clerk facing copy and audit entries.
-- Check the working tree before editing and preserve unrelated changes. Make small reviewable commits during authorized implementation, but do not push or submit without the user's direction.
+- Check the working tree before editing and preserve unrelated changes. The user authorized meaningful commits and pushes to the public GitHub repository during implementation. Do not email the submission without explicit direction.
 - Run relevant tests, lint, and build checks. Report pass/fail results and remaining gaps honestly. Do not claim a visual, offline, or error path was verified unless it was exercised.
 - Deliver four to six screenshots and a README of no more than one page when the user asks for the finished take home. `PRD.md`, `TASK.md`, and this file are internal working documents and do not replace that README.

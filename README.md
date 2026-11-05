@@ -1,36 +1,11 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Helpforce document approvals
 
-## Getting Started
+A local, offline-capable demonstration of Clerk → Officer → Senior Officer document review. Use Node.js 22+ and run `npm install && npm run dev`, then open `http://localhost:3000`. After dependencies are installed, the app makes no external runtime requests. Run logic tests with `npm test`, lint with `npm run lint`, and a production check with `npm run build`.
 
-First, run the development server:
+Choose any of the four accounts on the login screen. Clerks create documents and edit returned ones; approvers see only their own queue. The API enforces session, role, ownership, status, and document version. It returns `401` for missing sessions, `403` for forbidden actions, and `409` for stale decisions. On `403`/`409`, the UI explains the issue and reloads current data. The deterministic seed has 68 documents, including old items, PDFs, and repeat rejections. The in-memory store resets when the server restarts; new uploads and changes last for that server session. Seeded PDF previews use a bundled, locally generated sample.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Approvals are individual because each reviewer must inspect the original document and optional PDF. The review acknowledgment and confirmation are required in the UI; an AI summary never checks the acknowledgment for the reviewer. This is a deliberate declaration, not technical proof of reading. The local rule-based summary waits 2–4 seconds, fails every fifth request, links each point to an original paragraph, and logs every request. Summary loading and failure do not prevent document review.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To demonstrate errors: while logged in as a Clerk, request another Clerk’s document directly at `/api/documents/HF-0102` to see `403`; open the same pending document in two tabs as an approver, decide in one tab, then submit the stale decision in the other for `409`; select a PDF named `fail-upload.pdf` on the Clerk form for a repeatable upload failure that preserves typed fields. A missing session on a protected API URL returns `401`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+With another day, I would add persistent local storage, richer PDF fixtures, and browser-level accessibility and conflict tests. Working-day labels exclude weekends, not public holidays. The public repository is the submission link; include 4–6 key screenshots when sending the final submission to `usman@helpforce.ai`.

@@ -1,6 +1,6 @@
 # Helpforce build plan
 
-Work through these milestones in order. Check off a task only after its acceptance check passes. Keep commits small and meaningful during implementation; this planning pass does not authorize a commit. The submission deadline stated in the brief is Saturday, 7 November 2026 at 6:00 PM Pakistan time. Aim for the stated 5–7 hours and do not exceed nine hours of implementation effort.
+Work through these milestones in order. Check off a task only after its acceptance check passes. Keep commits small and meaningful and push them to the public repository as authorized. The submission deadline stated in the brief is Saturday, 7 November 2026 at 6:00 PM Pakistan time. Aim for the stated 5–7 hours and do not exceed nine hours of implementation effort.
 
 ## Milestone 0 — Baseline and design decisions
 
@@ -75,10 +75,13 @@ Work through these milestones in order. Check off a task only after its acceptan
 - [ ] Review every screen at desktop and narrow viewport sizes; inspect table, form, dialog, attachment, and audit readability.
 - [ ] Navigate the complete Clerk and approval flows using keyboard only; fix focus order, dialog focus, labels, contrast, and announcement issues.
 - [ ] Verify loading, empty, and error states, including `401`, `403`, `409`, upload failure, and AI failure.
+- [ ] Document repeatable evaluator steps for `403`, `409`, and upload failure without editing source code.
+- [ ] Verify that a summary alone never enables approval, a conflict clears review acknowledgment, and PDF presence is reflected in the acknowledgment.
 - [ ] Run lint, type/build checks, and at least five meaningful automated tests.
 - [ ] Verify that the app makes no external runtime requests and works with network disabled after installation.
 - [ ] Capture four to six representative screenshots: login, Clerk list/form or Returned state, queue, document review, audit, and AI summary.
 - [ ] Write a submission README of at most one page with run/test instructions, decisions, errors, AI safeguard, and next day improvements.
 - [ ] Review Git diff and commit history, then prepare the requested submission link or archive when explicitly requested.
+- [ ] Provide the public repository link for submission to `usman@helpforce.ai`; the candidate sends the email.
 
 **Done when:** a reviewer can start the app with the documented command, switch among four accounts, complete the full workflow, inspect errors and AI behavior, and understand the design decisions from the README.
