@@ -9,6 +9,7 @@ The user may request planning, design review, or implementation separately. Trea
 ## Product rules to preserve
 
 - Four accounts: two Clerks, one Officer, one Senior Officer. Clerk owns documents; Officer handles Pending Officer; Senior Officer handles Pending Senior Officer.
+- Clerks can track every status for their own documents, including Returned. Approvers can track the full pipeline and find documents they previously approved or returned; only the relevant queue permits a new decision. Both approve and reject require the original-document review acknowledgment in the UI.
 - The only persisted statuses are Pending Officer, Pending Senior Officer, Returned, and Approved. Rejections require a reason; Returned resubmission restarts at Officer; Approved is final and locked.
 - UI visibility is convenience. The mock API independently enforces session, ownership, role, current status, validation, and expected version. Use `401` for no session, `403` for unauthorized role/owner, `409` for stale or changed status. Refresh after `403` and `409`, and explain the result in plain language.
 - Seed at least 60 deterministic documents, including PDFs, repeated rejections, and old items. Give each a coherent audit trail. Record every summary request, including failure.

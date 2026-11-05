@@ -46,15 +46,15 @@ The four persisted statuses are Pending Officer, Pending Senior Officer, Returne
 
 ### Officer and Senior Officer: approval queue
 
-- Each role sees only items awaiting its own level of approval. Show title, owner, type, submitted/waiting date, status, and a text label for items waiting over five working days.
+- Each role has a focused queue of items awaiting its own approval level, plus a read-only pipeline of documents across every status and a record of its own past decisions. A decision moves the item out of the actionable queue but never makes it disappear from tracking. Show title, owner, type, submitted/waiting date, status, and a text label for items waiting over five working days.
 - Search by title; filter by date and document type; sort by date or waiting time. Support 60+ seeded documents with a clear page size and pagination, preserving filter state when returning from detail.
 - Show loading, no items, no filter matches, and request error states. Date filtering semantics and timezone should be visible and consistent. Calculate working days by excluding Saturday and Sunday; document that public holidays are not modeled.
 
 ### Document detail and decisions
 
 - Present the title, full body, status, owner, timestamps, optional inline PDF preview, latest rejection reason where relevant, and audit timeline. Make original content the primary reading surface.
-- Approve and reject controls appear only for the eligible role and status. Rejection requires a nonblank reason. Confirmation dialogs identify the document and describe the resulting status; final Senior Officer approval explicitly says it locks the document.
-- Require an explicit full document review acknowledgment before approval. The acknowledgment says the user reviewed the original body and attachment where present. It is an honest declaration, not a claim that scrolling proves reading. A summary request is optional; its loading or failure must not trap the reviewer.
+- Approve and reject controls appear only for the eligible role and status. Both remain disabled until the reviewer acknowledges reading the original document. Rejection requires a nonblank reason. Confirmation dialogs identify the document and describe the resulting status; final Senior Officer approval explicitly says it locks the document.
+- Require an explicit full document review acknowledgment before either decision. The acknowledgment says the user reviewed the original body and attachment where present. It is an honest declaration, not a claim that scrolling proves reading. A summary request is optional; its loading or failure must not trap the reviewer.
 - On `403`, explain the permission issue and refresh the document/queue. On `409`, say the document changed, refresh its latest version, and require a fresh review and confirmation before another action. On uncertain network failure, avoid claiming success.
 
 ### Audit history

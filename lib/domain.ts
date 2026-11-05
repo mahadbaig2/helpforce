@@ -69,6 +69,30 @@ export function mayView(user: User, doc: Document) {
   return user.role !== "clerk" || doc.ownerId === user.id;
 }
 
+export function visibleDocuments(user: User, documents: Document[]) {
+  return documents.filter((doc) => mayView(user, doc));
+}
+
+export function needsAction(user: User, doc: Document) {
+  return user.role === "clerk"
+    ? doc.ownerId === user.id && doc.status === "Returned"
+    : doc.status ===
+        (user.role === "officer"
+          ? "Pending Officer"
+          : "Pending Senior Officer");
+}
+
+export function handledBy(user: User, doc: Document) {
+  return (
+    user.role !== "clerk" &&
+    doc.audit.some(
+      (event) =>
+        event.actor === user.name &&
+        (event.action === "approved" || event.action === "rejected"),
+    )
+  );
+}
+
 export function transition(
   user: User,
   doc: Document,

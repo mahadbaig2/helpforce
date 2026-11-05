@@ -7,6 +7,9 @@ import {
   type FormEvent,
 } from "react";
 import {
+  handledBy,
+  needsAction,
+  statuses,
   types,
   workingDays,
   type Document,
@@ -16,6 +19,7 @@ import {
 } from "@/lib/domain";
 
 type View = "list" | "create" | "edit" | "detail";
+type Workspace = "inbox" | "pipeline" | "handled" | "all";
 type Failure = Error & { status?: number };
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch("/api/" + path, { cache: "no-store", ...init });
@@ -54,6 +58,8 @@ export default function Home() {
     [doc, setDoc] = useState<Document | null>(null);
   const [view, setView] = useState<View>("list"),
     [busy, setBusy] = useState(true);
+  const [workspace, setWorkspace] = useState<Workspace>("inbox");
+  const [expandedLanes, setExpandedLanes] = useState<string[]>([]);
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const [search, setSearch] = useState(""),
@@ -76,6 +82,13 @@ export default function Home() {
   const loadList = useCallback(async () => {
     setItems((await api<{ documents: Document[] }>("documents")).documents);
   }, []);
+  useEffect(() => {
+    const onFocus = () => {
+      if (user) loadList().catch((e) => setError(e.message));
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user, loadList]);
   const loadDoc = useCallback(async (id: string) => {
     const fresh = (await api<{ document: Document }>("documents/" + id))
       .document;
@@ -89,6 +102,7 @@ export default function Home() {
         setUser(session.user);
         if (session.user) {
           setSort(session.user.role === "clerk" ? "attention" : "oldest");
+          setWorkspace(session.user.role === "clerk" ? "pipeline" : "inbox");
           await loadList();
         }
       })
@@ -112,6 +126,7 @@ export default function Home() {
       ).user;
       setUser(signedIn);
       setSort(signedIn.role === "clerk" ? "attention" : "oldest");
+      setWorkspace(signedIn.role === "clerk" ? "pipeline" : "inbox");
       await loadList();
     } catch (e) {
       setError((e as Error).message);
@@ -125,6 +140,19 @@ export default function Home() {
     setItems([]);
     setDoc(null);
     setView("list");
+    setWorkspace("inbox");
+  }
+  function goWorkspace(next: Workspace) {
+    setWorkspace(next);
+    setView("list");
+    setPage(1);
+    setError("");
+    if (next === "pipeline") {
+      setFrom("");
+      setTo("");
+    }
+    if (next === "handled") setSort("newest");
+    loadList().catch((e) => setError(e.message));
   }
   async function open(id: string) {
     setBusy(true);
@@ -172,6 +200,11 @@ export default function Home() {
       setNotice(
         doc ? "Resubmitted to the Officer." : "Submitted to the Officer.",
       );
+      if (user?.role !== "clerk") {
+        setWorkspace("handled");
+        setSort("newest");
+        setPage(1);
+      }
     } catch (e) {
       const failure = e as Failure;
       setError(failure.message);
@@ -185,7 +218,7 @@ export default function Home() {
     }
   }
   async function act() {
-    if (!doc || !decision) return;
+    if (!doc || !decision || !reviewed) return;
     const action = decision;
     setDecision(null);
     setBusy(true);
@@ -244,7 +277,7 @@ export default function Home() {
       setSummaryBusy(false);
     }
   }
-  const shown = items
+  const matching = items
     .filter(
       (d) =>
         d.title.toLowerCase().includes(search.toLowerCase()) &&
@@ -270,6 +303,15 @@ export default function Home() {
         (sort === "newest" ? -1 : 1)
       );
     });
+  const shown = matching.filter((d) =>
+    !user
+      ? false
+      : workspace === "inbox"
+        ? needsAction(user, d)
+        : workspace === "handled"
+          ? handledBy(user, d)
+          : true,
+  );
   const pages = Math.max(1, Math.ceil(shown.length / 12)),
     currentPage = Math.min(page, pages);
   const canDecide =
@@ -336,14 +378,25 @@ export default function Home() {
         </div>
         <nav aria-label="Primary">
           <button
-            className="nav active"
-            onClick={() => {
-              setView("list");
-              loadList().catch((e) => setError(e.message));
-            }}
+            className={`nav ${workspace === "inbox" && view === "list" ? "active" : ""}`}
+            onClick={() => goWorkspace("inbox")}
           >
-            ▤ {user.role === "clerk" ? "My documents" : "Approval queue"}
+            ▤ {user.role === "clerk" ? "Needs attention" : "My review queue"}
           </button>
+          <button
+            className={`nav ${workspace === "pipeline" && view === "list" ? "active" : ""}`}
+            onClick={() => goWorkspace("pipeline")}
+          >
+            ◫ Document pipeline
+          </button>
+          {user.role !== "clerk" && (
+            <button
+              className={`nav ${workspace === "handled" && view === "list" ? "active" : ""}`}
+              onClick={() => goWorkspace("handled")}
+            >
+              ↗ My decisions
+            </button>
+          )}
           {user.role === "clerk" && (
             <button className="nav" onClick={() => editor()}>
               ＋ Create document
@@ -376,9 +429,13 @@ export default function Home() {
         <header className="topbar">
           Workspace <span>/</span>{" "}
           {view === "list"
-            ? user.role === "clerk"
-              ? "My documents"
-              : "Approval queue"
+            ? workspace === "pipeline"
+              ? "Document pipeline"
+              : workspace === "handled"
+                ? "My decisions"
+                : user.role === "clerk"
+                  ? "Needs attention"
+                  : "My review queue"
             : view === "create"
               ? "New document"
               : view === "edit"
@@ -408,16 +465,18 @@ export default function Home() {
                 <div>
                   <p className="eyebrow">
                     {user.role === "clerk"
-                      ? "YOUR WORKSPACE"
-                      : "READY FOR REVIEW"}
+                      ? "YOUR DOCUMENTS"
+                      : "APPROVAL WORKSPACE"}
                   </p>
                   <h1>
-                    {user.role === "clerk" ? "My documents" : "Approval queue"}
+                    {user.role === "clerk"
+                      ? "My documents"
+                      : "Document approvals"}
                   </h1>
                   <p className="muted">
                     {user.role === "clerk"
-                      ? "Track submissions and respond to returned documents."
-                      : `Documents awaiting ${role(user)} review.`}
+                      ? "See what needs a change and follow every submission through approval."
+                      : `Review your queue and follow documents after your ${role(user)} decision.`}
                   </p>
                 </div>
                 {user.role === "clerk" && (
@@ -426,241 +485,443 @@ export default function Home() {
                   </button>
                 )}
               </div>
-              <div className="stats">
-                <div>
-                  <span>Total documents</span>
-                  <strong>{items.length}</strong>
-                </div>
-                <div>
-                  <span>
-                    {user.role === "clerk"
-                      ? "Needs your attention"
-                      : "Over five working days"}
-                  </span>
+              <section
+                className="overview"
+                aria-label="Document status overview"
+              >
+                <div className="overview-lead">
+                  <span>NEEDS ACTION</span>
                   <strong>
-                    {
-                      items.filter((d) =>
-                        user.role === "clerk"
-                          ? d.status === "Returned"
-                          : workingDays(d.waitingSince) > 5,
-                      ).length
-                    }
+                    {items.filter((d) => needsAction(user, d)).length}
                   </strong>
-                </div>
-                <div>
-                  <span>
+                  <small>
                     {user.role === "clerk"
-                      ? "Final approvals"
-                      : "For your review"}
-                  </span>
-                  <strong>
-                    {
-                      items.filter((d) =>
-                        user.role === "clerk" ? d.status === "Approved" : true,
-                      ).length
-                    }
-                  </strong>
+                      ? "Returned to you"
+                      : `Waiting for ${role(user)} review`}
+                  </small>
                 </div>
+                {statuses.map((status) => (
+                  <button
+                    key={status}
+                    className="overview-state"
+                    onClick={() => goWorkspace("pipeline")}
+                  >
+                    <span
+                      className={`status-dot ${status.replaceAll(" ", "-").toLowerCase()}`}
+                    />{" "}
+                    <span>{status}</span>
+                    <strong>
+                      {items.filter((d) => d.status === status).length}
+                    </strong>
+                  </button>
+                ))}
+              </section>
+              <div className="workspace-bar">
+                <div className="workspace-tabs" aria-label="Document views">
+                  <button
+                    aria-pressed={workspace === "inbox"}
+                    className={workspace === "inbox" ? "selected" : ""}
+                    onClick={() => goWorkspace("inbox")}
+                  >
+                    {user.role === "clerk"
+                      ? "Needs attention"
+                      : "My review queue"}{" "}
+                    <span>
+                      {items.filter((d) => needsAction(user, d)).length}
+                    </span>
+                  </button>
+                  <button
+                    aria-pressed={workspace === "pipeline"}
+                    className={workspace === "pipeline" ? "selected" : ""}
+                    onClick={() => goWorkspace("pipeline")}
+                  >
+                    Pipeline
+                  </button>
+                  {user.role !== "clerk" && (
+                    <button
+                      aria-pressed={workspace === "handled"}
+                      className={workspace === "handled" ? "selected" : ""}
+                      onClick={() => goWorkspace("handled")}
+                    >
+                      My decisions{" "}
+                      <span>
+                        {items.filter((d) => handledBy(user, d)).length}
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    aria-pressed={workspace === "all"}
+                    className={workspace === "all" ? "selected" : ""}
+                    onClick={() => goWorkspace("all")}
+                  >
+                    All documents
+                  </button>
+                </div>
+                <button
+                  className="refresh-button"
+                  onClick={() => loadList().catch((e) => setError(e.message))}
+                >
+                  ↻ Refresh
+                </button>
               </div>
-              <section className="panel">
-                <div className="panel-head">
-                  <div>
-                    <h2>
-                      {user.role === "clerk"
-                        ? "All documents"
-                        : "Documents to review"}
-                    </h2>
-                    <p className="muted">{shown.length} matching documents</p>
+              {workspace === "pipeline" && (
+                <section
+                  className="pipeline-section"
+                  aria-label="Document pipeline"
+                >
+                  <div className="pipeline-intro">
+                    <div>
+                      <p className="eyebrow">LIVE WORKFLOW</p>
+                      <h2>Where every document stands</h2>
+                      <p className="muted">
+                        {user.role === "clerk"
+                          ? "Only your documents are shown."
+                          : "All documents are visible; actions remain limited to your review stage."}
+                      </p>
+                    </div>
+                    <div className="pipeline-search">
+                      <label>
+                        Search
+                        <input
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Find a document…"
+                        />
+                      </label>
+                      <label>
+                        Type
+                        <select
+                          value={filter}
+                          onChange={(e) => setFilter(e.target.value)}
+                        >
+                          <option value="all">All types</option>
+                          {types.map((t) => (
+                            <option key={t}>{t}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
                   </div>
-                </div>
-                <div className="filters">
-                  <label>
-                    Search by title
-                    <input
-                      value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value);
-                        setPage(1);
-                      }}
-                      placeholder="Search documents…"
-                    />
-                  </label>
-                  <label>
-                    Type
-                    <select
-                      value={filter}
-                      onChange={(e) => {
-                        setFilter(e.target.value);
-                        setPage(1);
-                      }}
-                    >
-                      <option value="all">All types</option>
-                      {types.map((t) => (
-                        <option key={t}>{t}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    From
-                    <input
-                      type="date"
-                      value={from}
-                      onChange={(e) => {
-                        setFrom(e.target.value);
-                        setPage(1);
-                      }}
-                    />
-                  </label>
-                  <label>
-                    To
-                    <input
-                      type="date"
-                      value={to}
-                      onChange={(e) => {
-                        setTo(e.target.value);
-                        setPage(1);
-                      }}
-                    />
-                  </label>
-                  <label>
-                    Sort
-                    <select
-                      value={sort}
-                      onChange={(e) => setSort(e.target.value)}
-                    >
-                      {user.role === "clerk" && (
-                        <option value="attention">Needs attention first</option>
-                      )}
-                      <option value="oldest">Oldest first</option>
-                      <option value="newest">Newest first</option>
-                    </select>
-                  </label>
-                </div>
-                {busy ? (
-                  <div className="empty">Loading documents…</div>
-                ) : shown.length ? (
-                  <>
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Document</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>
-                              {user.role === "clerk" ? "Updated" : "Waiting"}
-                            </th>
-                            <th>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {shown
-                            .slice((currentPage - 1) * 12, currentPage * 12)
-                            .map((d) => (
-                              <tr key={d.id}>
-                                <td>
-                                  <button
-                                    className="text-link"
-                                    onClick={() => open(d.id)}
-                                  >
-                                    {d.title}
-                                  </button>
-                                  <small>
-                                    {d.id} ·{" "}
-                                    {
-                                      accounts.find((a) => a.id === d.ownerId)
-                                        ?.name
-                                    }
-                                    {d.status === "Returned" && reasonFor(d)
-                                      ? ` · Returned: ${reasonFor(d)}`
-                                      : ""}
-                                  </small>
-                                </td>
-                                <td>{d.type}</td>
-                                <td>
-                                  <span
-                                    className={`badge ${d.status.replaceAll(" ", "-").toLowerCase()}`}
-                                  >
-                                    {d.status}
-                                  </span>
-                                </td>
-                                <td>
-                                  {user.role === "clerk" ? (
-                                    date(d.updatedAt)
-                                  ) : (
+                  <p className="board-hint">
+                    Swipe sideways to see each approval stage.
+                  </p>
+                  <div className="pipeline-board">
+                    {statuses.map((status) => {
+                      const lane = matching.filter((d) => d.status === status);
+                      const expanded = expandedLanes.includes(status);
+                      return (
+                        <section
+                          className="pipeline-lane"
+                          key={status}
+                          aria-label={`${status}: ${lane.length} documents`}
+                        >
+                          <header>
+                            <span
+                              className={`status-dot ${status.replaceAll(" ", "-").toLowerCase()}`}
+                            />
+                            <h3>{status}</h3>
+                            <span className="lane-count">{lane.length}</span>
+                          </header>
+                          <div className="lane-items">
+                            {lane.length ? (
+                              lane
+                                .slice(0, expanded ? undefined : 6)
+                                .map((d) => (
+                                  <article className="pipeline-card" key={d.id}>
+                                    <div className="card-meta">
+                                      <span>{d.id}</span>
+                                      <span>{d.type}</span>
+                                    </div>
+                                    <button
+                                      className="card-title"
+                                      onClick={() => open(d.id)}
+                                    >
+                                      {d.title}
+                                    </button>
+                                    <p>
+                                      {
+                                        accounts.find((a) => a.id === d.ownerId)
+                                          ?.name
+                                      }{" "}
+                                      · {date(d.updatedAt)}
+                                    </p>
+                                    {status === "Returned" && reasonFor(d) && (
+                                      <p className="card-reason">
+                                        Returned: {reasonFor(d)}
+                                      </p>
+                                    )}
+                                    {needsAction(user, d) &&
+                                      (user.role === "clerk" ? (
+                                        <button
+                                          className="card-action"
+                                          onClick={() => editor(d)}
+                                        >
+                                          Edit and resubmit →
+                                        </button>
+                                      ) : (
+                                        <span className="card-action">
+                                          Needs your review
+                                        </span>
+                                      ))}
+                                  </article>
+                                ))
+                            ) : (
+                              <p className="lane-empty">
+                                No documents match the filters.
+                              </p>
+                            )}
+                          </div>
+                          {lane.length > 6 && (
+                            <button
+                              className="lane-more"
+                              onClick={() =>
+                                setExpandedLanes((value) =>
+                                  expanded
+                                    ? value.filter((s) => s !== status)
+                                    : [...value, status],
+                                )
+                              }
+                            >
+                              {expanded
+                                ? "Show fewer"
+                                : `Show all ${lane.length}`}
+                            </button>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+              {workspace !== "pipeline" && (
+                <section className="panel list-panel">
+                  <div className="panel-head">
+                    <div>
+                      <h2>
+                        {workspace === "handled"
+                          ? "Decisions you made"
+                          : workspace === "all"
+                            ? "All documents"
+                            : user.role === "clerk"
+                              ? "Returned documents"
+                              : "Ready for your review"}
+                      </h2>
+                      <p className="muted">{shown.length} matching documents</p>
+                    </div>
+                  </div>
+                  <div className="filters">
+                    <label>
+                      Search by title
+                      <input
+                        value={search}
+                        onChange={(e) => {
+                          setSearch(e.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Search documents…"
+                      />
+                    </label>
+                    <label>
+                      Type
+                      <select
+                        value={filter}
+                        onChange={(e) => {
+                          setFilter(e.target.value);
+                          setPage(1);
+                        }}
+                      >
+                        <option value="all">All types</option>
+                        {types.map((t) => (
+                          <option key={t}>{t}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      From
+                      <input
+                        type="date"
+                        value={from}
+                        onChange={(e) => {
+                          setFrom(e.target.value);
+                          setPage(1);
+                        }}
+                      />
+                    </label>
+                    <label>
+                      To
+                      <input
+                        type="date"
+                        value={to}
+                        onChange={(e) => {
+                          setTo(e.target.value);
+                          setPage(1);
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Sort
+                      <select
+                        value={sort}
+                        onChange={(e) => setSort(e.target.value)}
+                      >
+                        {user.role === "clerk" && (
+                          <option value="attention">
+                            Needs attention first
+                          </option>
+                        )}
+                        <option value="oldest">Oldest first</option>
+                        <option value="newest">Newest first</option>
+                      </select>
+                    </label>
+                  </div>
+                  {busy ? (
+                    <div className="empty">Loading documents…</div>
+                  ) : shown.length ? (
+                    <>
+                      <div className="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Document</th>
+                              <th>Type</th>
+                              <th>Status</th>
+                              <th>
+                                {workspace === "inbox" && user.role !== "clerk"
+                                  ? "Waiting"
+                                  : "Updated"}
+                              </th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shown
+                              .slice((currentPage - 1) * 12, currentPage * 12)
+                              .map((d) => (
+                                <tr key={d.id}>
+                                  <td>
+                                    <button
+                                      className="text-link"
+                                      onClick={() => open(d.id)}
+                                    >
+                                      {d.title}
+                                    </button>
+                                    <small>
+                                      {d.id} ·{" "}
+                                      {
+                                        accounts.find((a) => a.id === d.ownerId)
+                                          ?.name
+                                      }
+                                      {d.status === "Returned" && reasonFor(d)
+                                        ? ` · Returned: ${reasonFor(d)}`
+                                        : ""}
+                                    </small>
+                                  </td>
+                                  <td>{d.type}</td>
+                                  <td>
                                     <span
-                                      className={
-                                        workingDays(d.waitingSince) > 5
-                                          ? "overdue"
-                                          : ""
+                                      className={`badge ${d.status.replaceAll(" ", "-").toLowerCase()}`}
+                                    >
+                                      {d.status}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {workspace !== "inbox" ||
+                                    user.role === "clerk" ? (
+                                      date(d.updatedAt)
+                                    ) : (
+                                      <span
+                                        className={
+                                          workingDays(d.waitingSince) > 5
+                                            ? "overdue"
+                                            : ""
+                                        }
+                                      >
+                                        {workingDays(d.waitingSince)} working
+                                        days
+                                        {workingDays(d.waitingSince) > 5
+                                          ? " · Overdue"
+                                          : ""}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="small-button"
+                                      onClick={() =>
+                                        d.status === "Returned" &&
+                                        user.role === "clerk"
+                                          ? editor(d)
+                                          : open(d.id)
                                       }
                                     >
-                                      {workingDays(d.waitingSince)} working days
-                                      {workingDays(d.waitingSince) > 5
-                                        ? " · Overdue"
-                                        : ""}
-                                    </span>
-                                  )}
-                                </td>
-                                <td>
-                                  <button
-                                    className="small-button"
-                                    onClick={() =>
-                                      d.status === "Returned" &&
+                                      {d.status === "Returned" &&
                                       user.role === "clerk"
-                                        ? editor(d)
-                                        : open(d.id)
-                                    }
-                                  >
-                                    {d.status === "Returned" &&
-                                    user.role === "clerk"
-                                      ? "Edit & resubmit"
-                                      : "Review →"}
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="pagination">
-                      <span>
-                        Page {currentPage} of {pages}
-                      </span>
-                      <div>
-                        <button
-                          disabled={currentPage <= 1}
-                          onClick={() => setPage(currentPage - 1)}
-                        >
-                          Previous
-                        </button>
-                        <button
-                          disabled={currentPage >= pages}
-                          onClick={() => setPage(currentPage + 1)}
-                        >
-                          Next
-                        </button>
+                                        ? "Edit & resubmit"
+                                        : needsAction(user, d)
+                                          ? "Review →"
+                                          : "View →"}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
                       </div>
+                      <div className="pagination">
+                        <span>
+                          Page {currentPage} of {pages}
+                        </span>
+                        <div>
+                          <button
+                            disabled={currentPage <= 1}
+                            onClick={() => setPage(currentPage - 1)}
+                          >
+                            Previous
+                          </button>
+                          <button
+                            disabled={currentPage >= pages}
+                            onClick={() => setPage(currentPage + 1)}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="empty">
+                      <strong>
+                        {workspace === "inbox" &&
+                        !search &&
+                        filter === "all" &&
+                        !from &&
+                        !to
+                          ? "Nothing needs your action"
+                          : "No matching documents"}
+                      </strong>
+                      <p>
+                        {workspace === "inbox" &&
+                        !search &&
+                        filter === "all" &&
+                        !from &&
+                        !to
+                          ? "Use Pipeline to follow documents already passed to another stage."
+                          : "Try clearing the filters or check back later."}
+                      </p>
+                      <button
+                        className="small-button"
+                        onClick={() => {
+                          setSearch("");
+                          setFilter("all");
+                          setFrom("");
+                          setTo("");
+                        }}
+                      >
+                        Clear filters
+                      </button>
                     </div>
-                  </>
-                ) : (
-                  <div className="empty">
-                    <strong>No matching documents</strong>
-                    <p>Try clearing the filters or check back later.</p>
-                    <button
-                      className="small-button"
-                      onClick={() => {
-                        setSearch("");
-                        setFilter("all");
-                        setFrom("");
-                        setTo("");
-                      }}
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                )}
-              </section>
+                  )}
+                </section>
+              )}
             </>
           )}
           {(view === "create" || view === "edit") && (
@@ -776,9 +1037,18 @@ export default function Home() {
                   loadList().catch((e) => setError(e.message));
                 }}
               >
-                ← Back to {user.role === "clerk" ? "my documents" : "queue"}
+                ← Back to{" "}
+                {workspace === "pipeline"
+                  ? "pipeline"
+                  : workspace === "handled"
+                    ? "my decisions"
+                    : workspace === "all"
+                      ? "all documents"
+                      : user.role === "clerk"
+                        ? "needs attention"
+                        : "my queue"}
               </button>
-              <div className="heading">
+              <div className="heading detail-heading">
                 <div>
                   <p className="eyebrow">DOCUMENT {doc.id}</p>
                   <h1>{doc.title}</h1>
@@ -796,6 +1066,60 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              <section
+                className="workflow-progress"
+                aria-label="Approval progress"
+              >
+                <div className="workflow-label">
+                  <strong>Approval journey</strong>
+                  <span>
+                    {doc.status === "Returned"
+                      ? "Returned to the Clerk for changes"
+                      : doc.status === "Approved"
+                        ? "Final approval complete"
+                        : `Currently with the ${doc.status === "Pending Officer" ? "Officer" : "Senior Officer"}`}
+                  </span>
+                </div>
+                <ol>
+                  {[
+                    "Submitted",
+                    "Officer review",
+                    "Senior Officer review",
+                    "Final approval",
+                  ].map((stage, index) => {
+                    const position =
+                      doc.status === "Pending Officer"
+                        ? 1
+                        : doc.status === "Pending Senior Officer"
+                          ? 2
+                          : doc.status === "Approved"
+                            ? 4
+                            : doc.audit.some(
+                                  (event) =>
+                                    event.from === "Pending Senior Officer" &&
+                                    event.action === "rejected",
+                                )
+                              ? 2
+                              : 1;
+                    const done = doc.status === "Approved" || index < position;
+                    const current =
+                      doc.status !== "Approved" &&
+                      doc.status !== "Returned" &&
+                      index === position;
+                    return (
+                      <li
+                        key={stage}
+                        className={`${done ? "done" : ""} ${current ? "current" : ""}`}
+                      >
+                        <span className="step-marker">
+                          {done ? "✓" : index + 1}
+                        </span>
+                        <span>{stage}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
               {doc.status === "Approved" && (
                 <div className="alert success">
                   Final approval complete. This document is locked.
@@ -881,10 +1205,34 @@ export default function Home() {
                   </section>
                 </div>
                 <aside>
+                  {!canDecide && user.role !== "clerk" && (
+                    <section className="panel context-panel">
+                      <p className="eyebrow">CURRENT STATE</p>
+                      <h2>{doc.status}</h2>
+                      <p className="muted">
+                        {handledBy(user, doc)
+                          ? "Your decision is recorded in the history below. You can keep following this document here."
+                          : "This document is visible for tracking. Decisions are available only when it reaches your review stage."}
+                      </p>
+                      <button
+                        className="small-button"
+                        onClick={() =>
+                          goWorkspace(
+                            handledBy(user, doc) ? "handled" : "pipeline",
+                          )
+                        }
+                      >
+                        {handledBy(user, doc)
+                          ? "View my decisions"
+                          : "View pipeline"}{" "}
+                        →
+                      </button>
+                    </section>
+                  )}
                   {canDecide && (
                     <section className="panel action-panel">
                       <p className="eyebrow">YOUR DECISION</p>
-                      <h2>Review this document</h2>
+                      <h2>Make a decision</h2>
                       <p className="muted">
                         Read the original document
                         {doc.attachment ? " and attachment" : ""} before
@@ -909,7 +1257,7 @@ export default function Home() {
                         </button>
                         <button
                           className="button danger"
-                          disabled={busy}
+                          disabled={!reviewed || busy}
                           onClick={() => setDecision("reject")}
                         >
                           Return with reason

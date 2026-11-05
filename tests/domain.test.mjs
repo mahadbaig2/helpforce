@@ -7,6 +7,9 @@ import {
   users,
   validateDocument,
   workingDays,
+  visibleDocuments,
+  needsAction,
+  handledBy,
 } from "../lib/domain.ts";
 
 const [clerk, otherClerk, officer, senior] = users;
@@ -68,3 +71,32 @@ test("working days skip weekends", () =>
     workingDays("2026-11-06T12:00:00Z", new Date("2026-11-09T12:00:00Z")),
     1,
   ));
+
+test("Clerks retain returned and approved documents in their own pipeline", () => {
+  const docs = [
+    { ...document("Returned"), ownerId: clerk.id },
+    { ...document("Approved"), ownerId: clerk.id },
+    { ...document("Returned"), ownerId: otherClerk.id },
+  ];
+  assert.deepEqual(visibleDocuments(clerk, docs), docs.slice(0, 2));
+  assert.equal(needsAction(clerk, docs[0]), true);
+});
+
+test("Approvers retain all stages and can find decisions they made", () => {
+  const docs = [
+    {
+      ...document("Returned"),
+      audit: [{ actor: officer.name, action: "rejected" }],
+    },
+    {
+      ...document("Approved"),
+      audit: [{ actor: officer.name, action: "approved" }],
+    },
+    { ...document("Pending Officer"), audit: [] },
+  ];
+  assert.equal(visibleDocuments(officer, docs).length, 3);
+  assert.equal(handledBy(officer, docs[0]), true);
+  assert.equal(handledBy(officer, docs[1]), true);
+  assert.equal(needsAction(officer, docs[0]), false);
+  assert.equal(needsAction(officer, docs[2]), true);
+});

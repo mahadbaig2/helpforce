@@ -9,6 +9,7 @@ import {
   types,
   users,
   validateDocument,
+  visibleDocuments,
   type Action,
   type Document,
   type DocumentType,
@@ -151,14 +152,7 @@ export function findDocument(id: string, user: User) {
   return doc;
 }
 export function listDocuments(user: User) {
-  return store.documents.filter((d) =>
-    user.role === "clerk"
-      ? d.ownerId === user.id
-      : d.status ===
-        (user.role === "officer"
-          ? "Pending Officer"
-          : "Pending Senior Officer"),
-  );
+  return visibleDocuments(user, store.documents);
 }
 function record(
   doc: Document,

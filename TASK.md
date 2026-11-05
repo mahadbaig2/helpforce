@@ -4,6 +4,8 @@ Work through these milestones in order. Check off a task only after its acceptan
 
 Implementation is underway. Domain logic, the local API, role workspaces, core document flows, and summary UI are implemented. Automated logic tests, lint, and production build pass. The final accessibility/offline pass, screenshot files, and broader interaction tests remain open below.
 
+Dashboard revision: the API list now retains all visible states, while the UI separates the actionable queue, four-stage pipeline, and approver decision history. Both decisions require review acknowledgment. Verify these views after both approve and return, including the owning Clerk's Returned lane.
+
 ## Milestone 0 — Baseline and design decisions
 
 - [x] Read `PRD.md`, the source PDF, `AGENTS.md`, and relevant installed Next.js guides before code changes.
