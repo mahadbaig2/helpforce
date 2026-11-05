@@ -2,32 +2,34 @@
 
 Work through these milestones in order. Check off a task only after its acceptance check passes. Keep commits small and meaningful and push them to the public repository as authorized. The submission deadline stated in the brief is Saturday, 7 November 2026 at 6:00 PM Pakistan time. Aim for the stated 5–7 hours and do not exceed nine hours of implementation effort.
 
+Implementation is underway. Domain logic, the local API, role workspaces, core document flows, and summary UI are implemented. Automated logic tests, lint, and production build pass. The final accessibility/offline pass, screenshot files, and broader interaction tests remain open below.
+
 ## Milestone 0 — Baseline and design decisions
 
-- [ ] Read `PRD.md`, the source PDF, `AGENTS.md`, and relevant installed Next.js guides before code changes.
-- [ ] Inspect repository state, package scripts, existing components, and installed test options.
-- [ ] Confirm local mock API/store and attachment strategy, including reset and restart behavior.
-- [ ] Define a compact visual system: typography, spacing, color, status labels, focus, dialogs, tables, and responsive layout. Capture any important assumption for the submission README.
+- [x] Read `PRD.md`, the source PDF, `AGENTS.md`, and relevant installed Next.js guides before code changes.
+- [x] Inspect repository state, package scripts, existing components, and installed test options.
+- [x] Confirm local mock API/store and attachment strategy, including reset and restart behavior.
+- [x] Define a compact visual system: typography, spacing, color, status labels, focus, dialogs, tables, and responsive layout. Capture any important assumption for the submission README.
 
 **Done when:** the workflow, route map, API boundaries, and visual direction are clear enough to implement without inventing behavior screen by screen.
 
 ## Milestone 1 — Domain model and deterministic fixture data
 
-- [ ] Define TypeScript types for users, roles, statuses, document types, documents, attachments, audit events, summary points, and structured API errors.
-- [ ] Implement pure permission and transition functions for create, edit/resubmit, approve, reject, and summarise eligibility.
-- [ ] Define version checks and audit event creation as part of each mutation.
-- [ ] Seed four users and 60+ coherent documents across statuses, owners, ages, PDFs, and repeated rejections. Give every document audit history.
-- [ ] Add focused tests for transition rules, role/owner denial, final lock, and stale versions.
+- [x] Define TypeScript types for users, roles, statuses, document types, documents, attachments, audit events, summary points, and structured API errors.
+- [x] Implement pure permission and transition functions for create, edit/resubmit, approve, reject, and summarise eligibility.
+- [x] Define version checks and audit event creation as part of each mutation.
+- [x] Seed four users and 60+ coherent documents across statuses, owners, ages, PDFs, and repeated rejections. Give every document audit history.
+- [x] Add focused tests for transition rules, role/owner denial, final lock, and stale versions.
 
 **Done when:** tests prove the workflow and the fixture data can demonstrate every required state.
 
 ## Milestone 2 — Local mock API and session
 
-- [ ] Implement local login, session lookup, and logout. Keep actor identity server owned.
-- [ ] Implement document list/detail, create, update/resubmit, approve, reject, attachment preview/upload, audit, and summarise endpoints as needed by the UI.
-- [ ] Validate title length, required body/type, PDF MIME/content/size, and nonblank rejection reason at the API boundary.
-- [ ] Return structured `401`, `403`, and `409` responses. Use expected document versions on mutations; write state and audit together.
-- [ ] Add a repeatable way to exercise conflict and upload failure, plus tests for permissions and errors.
+- [x] Implement local login, session lookup, and logout. Keep actor identity server owned.
+- [x] Implement document list/detail, create, update/resubmit, approve, reject, attachment preview/upload, audit, and summarise endpoints as needed by the UI.
+- [x] Validate title length, required body/type, PDF MIME/content/size, and nonblank rejection reason at the API boundary.
+- [x] Return structured `401`, `403`, and `409` responses. Use expected document versions on mutations; write state and audit together.
+- [x] Add a repeatable way to exercise conflict and upload failure, plus tests for permissions and errors.
 
 **Done when:** direct API calls cannot bypass role or state rules; a stale action returns `409` and the document remains correct.
 

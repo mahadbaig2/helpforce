@@ -40,7 +40,7 @@ function seed(): Store {
   const documents: Document[] = Array.from({ length: 68 }, (_, index) => {
     const status = statuses[index % statuses.length];
     const ownerId = Math.floor(index / 4) % 2 ? "clerk-2" : "clerk-1";
-    const days = 1 + ((index * 3) % 24);
+    const days = 1 + ((index * 7) % 23);
     const date = new Date(Date.now() - days * 86400000).toISOString();
     const type = types[Math.floor(index / 3) % types.length];
     const title = titles[Math.floor(index / 4) % titles.length];
