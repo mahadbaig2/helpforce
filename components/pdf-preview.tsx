@@ -6,10 +6,18 @@ import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 export default function PdfPreview({
   url,
   name,
+  onPageSeen,
+  onUnavailable,
 }: {
   url: string;
   name: string;
+  /** Called once a page has rendered on screen, so reading progress can be tracked. */
+  onPageSeen?: (page: number, total: number) => void;
+  /** Called when the preview fails and the reader opens the original instead. */
+  onUnavailable?: () => void;
 }) {
+  const seen = useRef(onPageSeen);
+  seen.current = onPageSeen;
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
@@ -87,6 +95,7 @@ export default function PdfPreview({
         if (active) {
           setError("");
           setLoading(false);
+          seen.current?.(page, pdf.numPages);
         }
       } catch (cause) {
         if (
@@ -123,7 +132,7 @@ export default function PdfPreview({
           >
             ‹
           </button>
-          <span>{pdf ? `${page} of ${pdf.numPages}` : "Loading PDF"}</span>
+          <span aria-live="polite">{pdf ? `Page ${page} of ${pdf.numPages}` : "Loading PDF"}</span>
           <button
             aria-label="Next PDF page"
             disabled={!pdf || page >= pdf.numPages}
@@ -156,7 +165,7 @@ export default function PdfPreview({
             +
           </button>
           <a href={url} target="_blank" rel="noopener noreferrer">
-            Open full size ↗
+            Open full size<span className="visually-hidden"> (opens in a new tab)</span> ↗
           </a>
         </div>
       </div>
@@ -173,21 +182,14 @@ export default function PdfPreview({
         {error && (
           <p className="pdf-loading" role="alert">
             {error}{" "}
-            <a href={url} target="_blank" rel="noopener noreferrer">
-              Open the original PDF
+            <a href={url} target="_blank" rel="noopener noreferrer" onClick={onUnavailable}>
+              Open the original PDF (opens in a new tab)
             </a>
             .
           </p>
         )}
         <canvas ref={canvas} aria-label={`${name}, page ${page}`} role="img" />
       </div>
-      <p className="pdf-fallback">
-        If the preview is unavailable,{" "}
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          open the PDF in a new tab
-        </a>
-        .
-      </p>
     </div>
   );
 }
