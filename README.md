@@ -2,7 +2,7 @@
 
 Clerk → Officer → Senior Officer approvals with a local mock API (Next.js 16, React 19, TypeScript). Fully offline: system fonts, bundled PDF.js worker, no external requests (verified with all non-localhost traffic blocked).
 
-**Run** (Node 20.9+): `npm install && npm run dev`, then open http://localhost:3000 and pick an account: Ayesha Khan or Bilal Ahmed (Clerks), Sara Malik (Officer), Omar Farooq (Senior Officer). **Tests:** `npm test` runs 47 Vitest tests (rules, queue, seed, API errors, UI in jsdom). `npm run test:e2e` runs 5 Playwright tests on a production build (approval, 409 conflict, 403, failed upload, expired session, axe-core and no external requests; first run `npx playwright install chromium`). Lint and build pass. Data is in memory and resets on restart. Screenshots: `screenshots/`.
+**Run** (Node 20.9+): `npm install && npm run dev`, then open http://localhost:3000 and pick an account: Ayesha Khan or Bilal Ahmed (Clerks), Sara Malik (Officer), Omar Farooq (Senior Officer). **Tests:** `npm test` runs 47 Vitest tests (rules, queue, seed, API errors, UI in jsdom). `npm run test:e2e` runs 5 Playwright tests on a production build (approval, 409 conflict, 403, failed upload, expired session, axe-core and no external requests; first run `npx playwright install chromium`). Lint and build pass. Data is in memory and resets on restart. Screenshots are at the end.
 
 ## Design decisions
 - **Server enforces everything.** `lib/api-handler.ts` checks session, role, ownership, status and the version the user saw; hiding buttons is only a convenience. Rules are pure functions in `lib/domain.ts`.
@@ -29,3 +29,29 @@ Working days skip weekends, not holidays. Approvers see all documents but decide
 
 ## With another day
 Persist data (SQLite); run both test suites in CI; public holidays in working days; a printable audit report for managers; screen-reader testing with NVDA/VoiceOver beyond automated checks.
+
+## Screenshots
+
+**Approval queue:** longest-waiting first, filters, waiting-time groups and overdue flags.
+
+![Approval queue](screenshots/1-approval-queue.png)
+
+**Document review:** the official text, the decision checklist, and the AI summary with a cited paragraph highlighted.
+
+![Document review with AI summary](screenshots/2-document-review-ai-summary.png)
+
+**Confirming a return:** a reason is required before the document goes back to the Clerk.
+
+![Confirm return dialog](screenshots/3-confirm-return.png)
+
+**Audit history:** plain sentences with roles, timing, status changes and reasons.
+
+![Audit history](screenshots/4-audit-history.png)
+
+**Failed upload:** the error is explained and everything typed is kept.
+
+![Upload failed, text kept](screenshots/5-upload-failed-text-kept.png)
+
+**Clerk's documents:** status, waiting time and the latest reason for return.
+
+![Clerk documents](screenshots/6-clerk-documents.png)
