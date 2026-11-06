@@ -10,7 +10,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "public" / "seed-pdfs"
+OUTPUT = ROOT / "fixtures" / "seed-pdfs"
 OUTPUT.mkdir(parents=True, exist_ok=True)
 
 TITLES = [

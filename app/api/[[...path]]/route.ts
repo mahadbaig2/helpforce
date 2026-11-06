@@ -138,7 +138,7 @@ export async function GET(req: NextRequest, ctx: Context) {
         store.files.get(doc.id) ??
         (fixture.has(doc.id)
           ? await readFile(
-              join(process.cwd(), "public", "seed-pdfs", `${doc.id}.pdf`),
+              join(process.cwd(), "fixtures", "seed-pdfs", `${doc.id}.pdf`),
             )
           : samplePdf(doc));
       return new Response(new Uint8Array(buffer), {
