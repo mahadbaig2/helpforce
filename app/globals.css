@@ -1143,7 +1143,6 @@ td small {
   top: 18px;
 }
 .paper {
-  border-top: 3px solid #315e78;
   min-height: 420px;
   box-shadow: none;
 }
@@ -1154,12 +1153,6 @@ td small {
   font-size: 15px;
   line-height: 1.75;
   margin-bottom: 19px;
-}
-.action-panel {
-  border-top: 3px solid #2268a6;
-}
-.context-panel {
-  border-top: 3px solid #8095a2;
 }
 .summary {
   background: #f9fbfc;

@@ -63,6 +63,39 @@ const reviewGroup = (d: Document) => {
   const days = workingDays(d.waitingSince);
   return days > 10 ? "critical" : days > 5 ? "urgent" : "recent";
 };
+function NavIcon({ name }: { name: "home" | "documents" | "compose" }) {
+  return (
+    <svg
+      className="nav-icon"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {name === "home" ? (
+        <>
+          <path d="m3 10 9-7 9 7v10H3z" />
+          <path d="M9 20v-7h6v7" />
+        </>
+      ) : name === "documents" ? (
+        <>
+          <rect x="5" y="3" width="14" height="18" rx="2" />
+          <path d="M9 8h6M9 12h6M9 16h4" />
+        </>
+      ) : (
+        <>
+          <path d="M5 4h10l4 4v12H5z" />
+          <path d="M15 4v4h4M9 14h6M12 11v6" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 export default function WorkspaceApp({
   initialWorkspace = "home",
@@ -77,6 +110,7 @@ export default function WorkspaceApp({
   const [view, setView] = useState<View>("list"),
     [busy, setBusy] = useState(true);
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace);
+  const [documentsOpen, setDocumentsOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedLanes, setExpandedLanes] = useState<string[]>([]);
   const [reviewTab, setReviewTab] = useState<ReviewTab>("critical");
@@ -432,42 +466,80 @@ export default function WorkspaceApp({
             <small>Document approvals</small>
           </div>
         </div>
-        <nav aria-label="Primary">
+        <nav aria-label="Primary" className="sidebar-nav">
           <button
-            className={`nav ${workspace === "home" && view === "list" ? "active" : ""}`}
+            className={`nav nav-top ${workspace === "home" && view === "list" ? "active" : ""}`}
             onClick={() => goWorkspace("home")}
           >
-            ⌂ Home
+            <NavIcon name="home" />
+            <span>Dashboard</span>
           </button>
           <button
-            className={`nav ${workspace === "inbox" && view === "list" ? "active" : ""}`}
-            onClick={() => goWorkspace("inbox")}
+            className="nav nav-parent"
+            aria-expanded={documentsOpen}
+            aria-controls="document-navigation"
+            onClick={() => setDocumentsOpen((value) => !value)}
           >
-            ▤ {user.role === "clerk" ? "Needs attention" : "My review queue"}
-          </button>
-          <button
-            className={`nav ${workspace === "pipeline" && view === "list" ? "active" : ""}`}
-            onClick={() => goWorkspace("pipeline")}
-          >
-            ◫ Document pipeline
-          </button>
-          {user.role !== "clerk" && (
-            <button
-              className={`nav ${workspace === "handled" && view === "list" ? "active" : ""}`}
-              onClick={() => goWorkspace("handled")}
+            <NavIcon name="documents" />
+            <span>Documents</span>
+            <svg
+              className={`nav-chevron ${documentsOpen ? "open" : ""}`}
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              aria-hidden="true"
             >
-              ↗ My decisions
-            </button>
-          )}
-          <button
-            className={`nav ${workspace === "all" && view === "list" ? "active" : ""}`}
-            onClick={() => goWorkspace("all")}
-          >
-            ▤ All documents
+              <path d="m2 4 4 4 4-4" />
+            </svg>
+            <span className="nav-count">
+              {items.filter((d) => needsAction(user, d)).length}
+            </span>
           </button>
+          {documentsOpen && (
+            <div id="document-navigation" className="nav-children">
+              <button
+                className={`nav-child ${workspace === "inbox" ? "active" : ""}`}
+                onClick={() => goWorkspace("inbox")}
+              >
+                <span>
+                  {user.role === "clerk" ? "Needs attention" : "My reviews"}
+                </span>
+                <span className="nav-count">
+                  {items.filter((d) => needsAction(user, d)).length}
+                </span>
+              </button>
+              <button
+                className={`nav-child ${workspace === "pipeline" ? "active" : ""}`}
+                onClick={() => goWorkspace("pipeline")}
+              >
+                Pipeline
+              </button>
+              {user.role !== "clerk" && (
+                <button
+                  className={`nav-child ${workspace === "handled" ? "active" : ""}`}
+                  onClick={() => goWorkspace("handled")}
+                >
+                  My decisions
+                </button>
+              )}
+              <button
+                className={`nav-child ${workspace === "all" ? "active" : ""}`}
+                onClick={() => goWorkspace("all")}
+              >
+                All documents
+              </button>
+            </div>
+          )}
           {user.role === "clerk" && (
-            <button className="nav" onClick={() => editor()}>
-              ＋ Create document
+            <button
+              className={`nav nav-compose ${view === "create" ? "active" : ""}`}
+              onClick={() => editor()}
+            >
+              <NavIcon name="compose" />
+              <span>Create document</span>
             </button>
           )}
         </nav>
@@ -492,15 +564,42 @@ export default function WorkspaceApp({
       <main className="main">
         <div className="mobile-header">
           <strong>Helpforce</strong>
-          <div>
+          <div className="mobile-header-actions">
+            <button className="mobile-signout" onClick={signOut}>
+              Sign out
+            </button>
             <button
+              className="mobile-menu-toggle"
+              type="button"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-navigation"
               onClick={() => setMobileMenuOpen((value) => !value)}
             >
-              {mobileMenuOpen ? "Close menu" : "Menu"}
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                {mobileMenuOpen ? (
+                  <>
+                    <path d="M4 4l12 12" />
+                    <path d="M16 4L4 16" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M3 5h14" />
+                    <path d="M3 10h14" />
+                    <path d="M3 15h14" />
+                  </>
+                )}
+              </svg>
             </button>
-            <button onClick={signOut}>Sign out</button>
           </div>
         </div>
         {mobileMenuOpen && (
@@ -553,51 +652,6 @@ export default function WorkspaceApp({
           )}
           {view === "list" && (
             <>
-              {workspace === "home" && (
-                <section
-                  className="home-stats"
-                  aria-label="Document statistics"
-                >
-                  <div>
-                    <span>Needs action</span>
-                    <strong>
-                      {items.filter((d) => needsAction(user, d)).length}
-                    </strong>
-                    <small>
-                      {user.role === "clerk"
-                        ? "Returned to you"
-                        : "Waiting for your decision"}
-                    </small>
-                  </div>
-                  <div>
-                    <span>In review</span>
-                    <strong>
-                      {
-                        items.filter(
-                          (d) =>
-                            d.status === "Pending Officer" ||
-                            d.status === "Pending Senior Officer",
-                        ).length
-                      }
-                    </strong>
-                    <small>At either approval stage</small>
-                  </div>
-                  <div>
-                    <span>Returned</span>
-                    <strong>
-                      {items.filter((d) => d.status === "Returned").length}
-                    </strong>
-                    <small>Awaiting Clerk changes</small>
-                  </div>
-                  <div>
-                    <span>Approved</span>
-                    <strong>
-                      {items.filter((d) => d.status === "Approved").length}
-                    </strong>
-                    <small>Final and locked</small>
-                  </div>
-                </section>
-              )}
               <div className="heading">
                 <div>
                   <p className="eyebrow">
@@ -646,6 +700,51 @@ export default function WorkspaceApp({
                   )}
                 </div>
               </div>
+              {workspace === "home" && (
+                <section
+                  className="home-stats"
+                  aria-label="Document statistics"
+                >
+                  <div className="lead-stat">
+                    <span>Needs action</span>
+                    <strong>
+                      {items.filter((d) => needsAction(user, d)).length}
+                    </strong>
+                    <small>
+                      {user.role === "clerk"
+                        ? "Returned to you"
+                        : "Waiting for your decision"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>In review</span>
+                    <strong>
+                      {
+                        items.filter(
+                          (d) =>
+                            d.status === "Pending Officer" ||
+                            d.status === "Pending Senior Officer",
+                        ).length
+                      }
+                    </strong>
+                    <small>At either approval stage</small>
+                  </div>
+                  <div>
+                    <span>Returned</span>
+                    <strong>
+                      {items.filter((d) => d.status === "Returned").length}
+                    </strong>
+                    <small>Awaiting Clerk changes</small>
+                  </div>
+                  <div>
+                    <span>Approved</span>
+                    <strong>
+                      {items.filter((d) => d.status === "Approved").length}
+                    </strong>
+                    <small>Final and locked</small>
+                  </div>
+                </section>
+              )}
               {workspace === "home" && (
                 <div className="home-grid">
                   <section className="home-card home-reviews">
@@ -997,7 +1096,7 @@ export default function WorkspaceApp({
                         {workspace === "handled"
                           ? "Decisions you made"
                           : workspace === "all"
-                            ? "All documents"
+                            ? "Document register"
                             : user.role === "clerk"
                               ? "Returned documents"
                               : "Ready for your review"}

@@ -1,7 +1,9 @@
 # Design decisions to carry into the submission README
 
 - Home starts with real document counts: needs action, in review, returned, and approved. The counts are scoped to the documents visible to the current role.
-- Desktop navigation lives in the sidebar. A compact Menu button exposes the same destinations on mobile, where the sidebar is hidden.
+- The Home greeting now leads and the stats sit directly below it. The first stat highlights actionable work; secondary totals use quieter weight. A light sidebar, warm white workspace, thin dividers, and a smaller metadata scale follow the supplied visual references without copying their mock browser framing. Neutral gray surfaces and blue actions leave red for critical work and errors, amber for urgent or returned work, and green for approved or successful outcomes.
+- Desktop navigation lives in the sidebar. The mobile menu exposes the same destinations where the sidebar is hidden.
+- Mobile navigation uses an unboxed hamburger at the far right of the header, with Sign out beside it. Review cards use a consistent thin outline without colored top borders.
 - Reviews default to the Critical pill and offer Urgent, Recent, and All. Search, type, waiting date range, and sort controls sit above the pills. Critical means more than 10 working days; Urgent means 6–10; Recent means up to 5. Items over 5 working days are explicitly flagged.
 - The document view uses two columns. The original PDF or body has the wide reading area. Decision controls, AI summary, and a readable audit timeline share the right rail. This keeps the PDF large enough to read.
 - Four distinct PDFs are bundled for seeded documents at different stages. A local PDF.js worker renders their pages and actual uploaded PDFs with page and zoom controls; the API continues to enforce role access. The original body remains present because the assessment requires it and summary citations must link to it.
