@@ -212,7 +212,7 @@ export function checkVersion(doc: Pick<Document, "version">, version: number) {
     throw new ApiError(
       409,
       "CHANGED",
-      "Someone else changed this document while you had it open. The latest version is now shown — please review it before deciding.",
+      "Someone else changed this document while you had it open, so your action was not applied.",
     );
 }
 

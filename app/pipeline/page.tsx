@@ -1,5 +1,5 @@
-import WorkspaceApp from "../workspace";
+import PipelineBoard from "@/components/pipeline-board";
 
 export default function PipelinePage() {
-  return <WorkspaceApp initialWorkspace="pipeline" />;
+  return <PipelineBoard />;
 }

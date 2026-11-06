@@ -15,6 +15,18 @@ describe("seed data", () => {
     expect(new Set(docs.map((d) => d.id)).size).toBe(docs.length);
   });
 
+  it("mixes document kinds across statuses so search and filters find real variety", () => {
+    const byKind = new Map<string, Set<string>>();
+    for (const d of docs) {
+      const kind = d.title.split(" — ")[0];
+      byKind.set(kind, (byKind.get(kind) ?? new Set()).add(d.status));
+    }
+    expect(byKind.size).toBe(8);
+    for (const set of byKind.values()) expect(set.size).toBeGreaterThanOrEqual(3);
+    for (const type of ["Policy", "Finance", "Operations", "Personnel"])
+      expect(docs.some((d) => d.type === type && d.status === "Pending Officer")).toBe(true);
+  });
+
   it("gives every document a coherent, chronological audit trail", () => {
     for (const d of docs) {
       expect(d.audit[0]).toMatchObject({ action: "submitted", from: null, to: "Pending Officer", actorId: d.ownerId });

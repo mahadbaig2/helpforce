@@ -1,5 +1,5 @@
-import WorkspaceApp from "../workspace";
+import DocumentList from "@/components/document-list";
 
 export default function DecisionsPage() {
-  return <WorkspaceApp initialWorkspace="handled" />;
+  return <DocumentList scope="decisions" />;
 }

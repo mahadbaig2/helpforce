@@ -186,8 +186,9 @@ export function seedDocuments(now = Date.now()): Document[] {
     const id = `HF-${String(index + 101).padStart(4, "0")}`;
     const status: Status = (["Pending Officer", "Pending Senior Officer", "Returned", "Approved"] as const)[index % 4];
     const owner: User = Math.floor(index / 4) % 2 ? clerk2 : clerk1;
-    const template = templates[index % templates.length];
-    const region = regions[Math.floor(index / templates.length) % regions.length];
+    // Mixed so every kind of document appears at every status.
+    const template = templates[(index + Math.floor(index / 4) * 3) % templates.length];
+    const region = regions[(index * 5) % regions.length];
     // Earlier rejection cycles: 0, 1 or 2, so some documents have been returned more than once.
     const cycles = [0, 1, 0, 2, 0, 0, 1][index % 7];
     // Calendar days the document has been in its current stage: 0–25.

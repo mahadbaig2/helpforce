@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { handledBy, needsAction, type Document } from "@/lib/domain";
 import { applyQueue, paginate } from "@/lib/queue";
 import { useApp } from "./app-provider";
@@ -16,7 +16,10 @@ type Scope = "queue" | "all" | "decisions";
 export default function DocumentList({ scope }: { scope: Scope }) {
   const { user, documents, documentsStatus, documentsError, refreshDocuments, filters, setFilters } = useApp();
   const [page, setPage] = useState(1);
-  useEffect(() => setPage(1), [filters]);
+  const changeFilters = (update: Parameters<typeof setFilters>[0]) => {
+    setFilters(update);
+    setPage(1);
+  };
 
   const clerk = user.role === "clerk";
   if (scope === "decisions" && clerk)
@@ -107,7 +110,7 @@ export default function DocumentList({ scope }: { scope: Scope }) {
         </EmptyState>
       ) : (
         <section className="panel" aria-label={copy.title}>
-          <QueueFilterBar filters={filters} onChange={setFilters} counts={counts} />
+          <QueueFilterBar filters={filters} onChange={changeFilters} counts={counts} />
           {items.length === 0 ? (
             <EmptyState title="No documents match these filters">
               <p>Try a different search, type, date range or waiting-time group.</p>

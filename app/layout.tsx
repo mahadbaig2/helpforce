@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
+import AppProvider from "@/components/app-provider";
 import "./globals.css";
-import "./theme.css";
 
 export const metadata: Metadata = {
-  title: "Helpforce | Document approvals",
+  title: "Helpforce · Document approvals",
   description: "Local document approval workspace",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en-GB">
+      <body>
+        <AppProvider>{children}</AppProvider>
+      </body>
     </html>
   );
 }

@@ -16,8 +16,6 @@ export default function PdfPreview({
   /** Called when the preview fails and the reader opens the original instead. */
   onUnavailable?: () => void;
 }) {
-  const seen = useRef(onPageSeen);
-  seen.current = onPageSeen;
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
@@ -95,7 +93,7 @@ export default function PdfPreview({
         if (active) {
           setError("");
           setLoading(false);
-          seen.current?.(page, pdf.numPages);
+          onPageSeen?.(page, pdf.numPages);
         }
       } catch (cause) {
         if (
@@ -115,7 +113,7 @@ export default function PdfPreview({
       active = false;
       renderTask?.cancel();
     };
-  }, [pdf, page, zoom, width]);
+  }, [pdf, page, zoom, width, onPageSeen]);
 
   return (
     <div className="pdf-preview">

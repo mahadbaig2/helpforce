@@ -1,5 +1,5 @@
-import WorkspaceApp from "./workspace";
+import Dashboard from "@/components/dashboard";
 
 export default function HomePage() {
-  return <WorkspaceApp initialWorkspace="home" />;
+  return <Dashboard />;
 }

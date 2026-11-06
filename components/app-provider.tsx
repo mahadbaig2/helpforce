@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -23,7 +23,8 @@ export type Notice = {
   tone: "success" | "error" | "info";
   text: string;
   link?: { href: string; label: string };
-  createdAt: number;
+  /** The page the message belongs to; it is only shown there. */
+  path: string;
 };
 
 export type AppState = {
@@ -34,7 +35,8 @@ export type AppState = {
   documentsError: string;
   refreshDocuments: () => Promise<void>;
   notices: Notice[];
-  notify: (notice: Omit<Notice, "id" | "createdAt">) => void;
+  /** Shows a message on the current page, or on `path` when about to navigate there. */
+  notify: (notice: Omit<Notice, "id" | "path"> & { path?: string }) => void;
   dismiss: (id: number) => void;
   /**
    * Central handling for API failures. 401 signs the user out (drafts stay on
@@ -61,6 +63,7 @@ const toFailure = (error: unknown) =>
 
 export default function AppProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [phase, setPhase] = useState<"checking" | "failed" | "ready">("checking");
   const [startupError, setStartupError] = useState("");
   const [accounts, setAccounts] = useState<User[]>([]);
@@ -73,19 +76,21 @@ export default function AppProvider({ children }: { children: ReactNode }) {
   const [filters, setFilterState] = useState<QueueFilters>(defaultFilters);
   const noticeId = useRef(0);
   const userRef = useRef<User | null>(null);
-  userRef.current = user;
+  const pathRef = useRef(pathname);
+  useEffect(() => {
+    userRef.current = user;
+    pathRef.current = pathname;
+  }, [user, pathname]);
 
-  const notify = useCallback((notice: Omit<Notice, "id" | "createdAt">) => {
+  const notify = useCallback((notice: Omit<Notice, "id" | "path"> & { path?: string }) => {
     const id = ++noticeId.current;
+    const path = notice.path ?? pathRef.current;
     // Replace an identical message rather than stacking duplicates.
-    setNotices((all) => [...all.filter((n) => n.text !== notice.text), { ...notice, id, createdAt: Date.now() }].slice(-3));
+    setNotices((all) => [...all.filter((n) => n.text !== notice.text), { ...notice, id, path }].slice(-4));
   }, []);
   const dismiss = useCallback((id: number) => setNotices((all) => all.filter((n) => n.id !== id)), []);
-
-  // Messages belong to the screen they were raised on; drop older ones on navigation.
-  useEffect(() => {
-    setNotices((all) => all.filter((n) => Date.now() - n.createdAt < 1500));
-  }, [pathname]);
+  // Messages belong to the screen they were raised on.
+  const pageNotices = useMemo(() => notices.filter((n) => n.path === pathname), [notices, pathname]);
 
   const signedOut = useCallback((message: string) => {
     setUser(null);
@@ -109,8 +114,10 @@ export default function AppProvider({ children }: { children: ReactNode }) {
       if (previous) signedOut("Your session has ended. Please sign in again. Any unsent text you typed is saved on this device.");
       return null;
     }
-    if (previous && previous.id !== current.id)
+    if (previous && previous.id !== current.id) {
+      setFilterState(defaultFilters);
       notify({ tone: "info", text: `You are now signed in as ${current.name} (${roleLabel(current.role)}) because the account was changed in another tab.` });
+    }
     setUser(current);
     return current;
   }, [notify, signedOut]);
@@ -123,7 +130,7 @@ export default function AppProvider({ children }: { children: ReactNode }) {
       } else if (failure.status === 403 || failure.status === 409) {
         notify({
           tone: "error",
-          text: `${failure.message} ${failure.status === 409 ? "The latest version has been loaded." : "The page has been refreshed with what you are allowed to see."}`,
+          text: `${failure.message} ${failure.status === 409 ? "The latest version is now shown — please check it before acting again." : "The page has been refreshed with what you are allowed to see."}`,
         });
         void syncSession()
           .then((current) => (current ? loadDocuments() : undefined))
@@ -146,26 +153,30 @@ export default function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [handleError, loadDocuments]);
 
-  const start = useCallback(async () => {
+  const boot = useCallback(
+    () =>
+      Promise.all([api<User[]>("users"), api<{ user: User | null }>("session")])
+        .then(([all, session]) => {
+          setAccounts(all);
+          setUser(session.user);
+          setPhase("ready");
+          if (session.user) void refreshDocuments();
+        })
+        .catch((error) => {
+          setStartupError(toFailure(error).message);
+          setPhase("failed");
+        }),
+    [refreshDocuments],
+  );
+
+  useEffect(() => {
+    void boot();
+  }, [boot]);
+
+  const retryStart = () => {
     setPhase("checking");
-    try {
-      const [all, session] = await Promise.all([api<User[]>("users"), api<{ user: User | null }>("session")]);
-      setAccounts(all);
-      setUser(session.user);
-      setPhase("ready");
-    } catch (error) {
-      setStartupError(toFailure(error).message);
-      setPhase("failed");
-    }
-  }, []);
-
-  useEffect(() => {
-    void start();
-  }, [start]);
-
-  useEffect(() => {
-    if (user) void refreshDocuments();
-  }, [user?.id, refreshDocuments]); // eslint-disable-line react-hooks/exhaustive-deps
+    void boot();
+  };
 
   // Coming back to the tab: pick up decisions made elsewhere.
   useEffect(() => {
@@ -190,7 +201,8 @@ export default function AppProvider({ children }: { children: ReactNode }) {
     setNotices([]);
     setDocumentsStatus("loading");
     setUser(next);
-  }, []);
+    void refreshDocuments();
+  }, [refreshDocuments]);
 
   const signOut = useCallback(async () => {
     try {
@@ -200,43 +212,40 @@ export default function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setFilterState(defaultFilters);
       signedOut("");
+      router.push("/");
     }
-  }, [signedOut]);
+  }, [signedOut, router]);
 
   const setFilters = useCallback((update: Partial<QueueFilters>) => setFilterState((f) => ({ ...f, ...update })), []);
   const ownerName = useCallback((id: string) => accounts.find((a) => a.id === id)?.name ?? "Unknown Clerk", [accounts]);
 
-  const value = useMemo<AppState | null>(
-    () =>
-      user
-        ? {
-            user,
-            accounts,
-            documents,
-            documentsStatus,
-            documentsError,
-            refreshDocuments,
-            notices,
-            notify,
-            dismiss,
-            handleError,
-            filters,
-            setFilters,
-            ownerName,
-            signOut,
-          }
-        : null,
-    [user, accounts, documents, documentsStatus, documentsError, refreshDocuments, notices, notify, dismiss, handleError, filters, setFilters, ownerName, signOut],
-  );
-
+  // The React Compiler memoises this object; no manual useMemo needed.
   if (phase === "checking") return <LoadingState label="Loading Helpforce" fullPage />;
   if (phase === "failed")
     return (
       <main className="page-center">
-        <ErrorState title="Helpforce could not start" message={startupError} onRetry={start} />
+        <ErrorState title="Helpforce could not start" message={startupError} onRetry={retryStart} />
       </main>
     );
-  if (!value) return <LoginScreen accounts={accounts} message={sessionMessage} onSignIn={signIn} />;
+  if (!user) return <LoginScreen accounts={accounts} message={sessionMessage} onSignIn={signIn} />;
+
+  const value: AppState = {
+        user,
+        accounts,
+        documents,
+        documentsStatus,
+        documentsError,
+        refreshDocuments,
+        notices: pageNotices,
+        notify,
+        dismiss,
+        handleError,
+        filters,
+        setFilters,
+        ownerName,
+        signOut,
+      };
+
   return (
     <AppContext.Provider value={value}>
       <AppShell>{children}</AppShell>

@@ -1,5 +1,5 @@
-import WorkspaceApp from "../workspace";
+import DocumentList from "@/components/document-list";
 
 export default function ReviewsPage() {
-  return <WorkspaceApp initialWorkspace="inbox" />;
+  return <DocumentList scope="queue" />;
 }

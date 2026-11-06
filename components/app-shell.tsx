@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { needsAction, roleLabel } from "@/lib/domain";
 import { useApp } from "./app-provider";
 import { initials } from "./login-screen";
@@ -12,8 +12,9 @@ type NavItem = { href: string; label: string; count?: number };
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, documents, notices, dismiss, signOut } = useApp();
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
-  useEffect(() => setMenuOpen(false), [pathname]);
+  // The mobile menu closes itself on navigation: it is "open" only for the page it was opened on.
+  const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null);
+  const menuOpen = menuOpenOn === pathname;
 
   const actionCount = documents.filter((d) => needsAction(user, d)).length;
   const items: NavItem[] = [
@@ -68,7 +69,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           className="menu-toggle"
           aria-expanded={menuOpen}
           aria-controls="primary-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => setMenuOpenOn(menuOpen ? null : pathname)}
         >
           {menuOpen ? "Close menu" : "Menu"}
         </button>

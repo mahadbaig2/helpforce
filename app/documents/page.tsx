@@ -1,5 +1,5 @@
-import WorkspaceApp from "../workspace";
+import DocumentList from "@/components/document-list";
 
 export default function DocumentsPage() {
-  return <WorkspaceApp initialWorkspace="all" />;
+  return <DocumentList scope="all" />;
 }
