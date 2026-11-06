@@ -676,7 +676,7 @@ main:focus {
 }
 .filter-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr));
+  grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) minmax(200px, 1.2fr);
   gap: 10px;
 }
 @media (max-width: 1100px) {
@@ -939,6 +939,8 @@ textarea {
   font-size: 0.85rem;
 }
 .lane-count {
+  align-self: start;
+  line-height: 1.7;
   font-weight: 700;
   background: var(--surface);
   border-radius: 999px;
@@ -965,6 +967,11 @@ textarea {
 }
 
 /* ---------- Document view ---------- */
+.doc-facts .waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .doc-facts {
   display: flex;
   flex-wrap: wrap;
@@ -1051,13 +1058,6 @@ textarea {
 .doc-rail {
   display: grid;
   gap: 16px;
-  position: sticky;
-  top: 16px;
-}
-@media (max-width: 1100px) {
-  .doc-rail {
-    position: static;
-  }
 }
 
 /* The official document looks like paper: serif, white, ruled header. */

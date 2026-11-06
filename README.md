@@ -1,11 +1,31 @@
 # Helpforce document approvals
 
-A local, offline-capable demonstration of Clerk → Officer → Senior Officer document review. Use Node.js 22.18+ and run `npm install && npm run dev`, then open `http://localhost:3000`. After dependencies are installed, the app makes no external runtime requests. Run logic tests with `npm test`, lint with `npm run lint`, and a production check with `npm run build`.
+Clerk → Officer → Senior Officer approvals with a local mock API (Next.js 16, React 19, TypeScript). Fully offline: system fonts, bundled PDF.js worker, no external requests (verified with all non-localhost traffic blocked).
 
-Choose any of the four accounts on the login screen. Home (`/`) starts with role-scoped statistics and a short action list. Reviews (`/reviews`) defaults to the Critical pill, with Urgent, Recent, and All views plus search, type, date, and sort filters. Critical means more than 10 working days, Urgent 6–10, and Recent up to 5; documents are newest first by default. Pipeline (`/pipeline`) groups documents by stage and initially shows three cards per stage; All documents (`/documents`) offers a searchable table. Approvers also have Decisions (`/decisions`) for documents they handled. Clerks create documents, see all stages of their own pipeline, and edit returned ones. The API enforces session, role, ownership, status, and document version. It returns `401` for missing sessions, `403` for forbidden actions, and `409` for stale decisions. On `403`/`409`, the UI explains the issue and reloads current data. The deterministic seed has 68 documents, including old items, PDFs, and repeat rejections. Four distinct seeded PDFs are bundled; a local PDF renderer previews them and actual uploads with page and zoom controls. The in-memory store resets when the server restarts; new uploads and changes last for that server session.
+**Run** (Node 20.9+): `npm install && npm run dev`, then open http://localhost:3000 and pick an account: Ayesha Khan or Bilal Ahmed (Clerks), Sara Malik (Officer), Omar Farooq (Senior Officer). **Tests:** `npm test` runs 47 Vitest tests (rules, queue, seed, API errors, UI in jsdom). `npm run test:e2e` runs 5 Playwright tests on a production build (approval, 409 conflict, 403, failed upload, expired session, axe-core and no external requests; first run `npx playwright install chromium`). Lint and build pass. Data is in memory and resets on restart. Screenshots: `screenshots/`.
 
-Approvals are individual because each reviewer must inspect the original document and optional PDF. Both approve and return remain disabled until the review acknowledgment; each decision also requires confirmation. An AI summary never checks the acknowledgment for the reviewer. This is a deliberate declaration, not technical proof of reading. The brief explicitly requires a Summarise action, so it remains optional in the right rail beside the audit history. The local rule-based summary waits 2–4 seconds, fails every fifth request, links each point to an original paragraph, and logs every request. Summary loading and failure do not prevent document review.
+## Design decisions
+- **Server enforces everything.** `lib/api-handler.ts` checks session, role, ownership, status and the version the user saw; hiding buttons is only a convenience. Rules are pure functions in `lib/domain.ts`.
+- **Queue for 60+ items:** longest-waiting first; search, type and date-reached filters; sort by waiting time or title; On time (≤5 working days) / Overdue / Critical (>10) groups with counts, flagged in text not just colour; 15 per page; **Review next document** after each decision. Every document has its own URL.
+- **No bulk approval.** An approval asserts "I read this document and its attachment"; a batch would make that untrue for irreversible official decisions. Speed comes from the ordered queue and "Review next".
+- **Safe irreversible actions:** Approve/Return unlock only after scrolling to the end of the text, viewing every PDF page and ticking "I read the original myself"; both confirm in a dialog (focus on Cancel); returning needs a reason. Approved documents show a lock, no edit controls, and the API answers 409.
+- **Audit history for a manager:** one plain sentence per step with name and role ("Sara Malik (Officer) approved it and passed it to the Senior Officer"), date, time since the previous step, status change and reason. Oldest or newest first; AI activity can be hidden.
 
-To demonstrate errors: while logged in as Ayesha Khan, request Bilal Ahmed’s document directly at `/api/documents/HF-0105` to see `403`; open the same pending document in two tabs as an approver, decide in one tab, then submit the stale decision in the other for `409`; select a PDF named `fail-upload.pdf` on the Clerk form for a repeatable upload failure that preserves typed fields. A missing session on a protected API URL returns `401`.
+## Permission and conflict errors
+One client (`lib/client/api.ts`) and one handler (`components/app-provider.tsx`):
+- **401:** back to sign-in with an explanation, then to the same page.
+- **403 / 409:** a plain explanation ("Someone else changed this document… the latest version is now shown"), then session, list and document reload and the reading confirmation resets.
+- **Other failures:** shown in place, with a retry.
+- **Nothing typed is lost:** the Clerk form saves a local draft on every change, so a failed upload, expired session or reload keeps the text; upload errors show at the file field.
+- **Demonstrate:** open one pending document in two tabs and approve it in one, then act in the other (409). As Ayesha, open `/documents/HF-0105` (403). Attach a PDF named `fail-upload.pdf` (upload fails, text kept).
 
-With another day, I would add persistent local storage, richer PDF fixtures, and browser-level accessibility and conflict tests. Working-day labels exclude weekends, not public holidays. The public repository is the submission link; include 4–6 key screenshots when sending the final submission to `usman@helpforce.ai`.
+## AI summary
+Approvers get **Summarise** in a purple dashed panel labelled "AI-generated · Not part of the document", apart from the paper-styled original. The rule-based mock takes 2–4 s and fails every 5th call. Reading and deciding continue while it loads; it can be cancelled, and leaving the page aborts it so a late reply never lands on another document. Each point links to its source section, which is scrolled to, highlighted and focused. Every request, success and failure is audited.
+
+**Approving on the summary alone is prevented by design, not just by a warning:** the decision checklist counts only the original text and every PDF page; the summary counts for nothing, and the confirmation reads "I am not relying on the AI summary". This proves the document was shown, not understood, which is an accepted limit.
+
+## Assumptions
+Working days skip weekends, not holidays. Approvers see all documents but decide only at their stage; Clerks see only their own. Resubmitting without a file keeps the existing PDF. No passwords (demo).
+
+## With another day
+Persist data (SQLite); run both test suites in CI; public holidays in working days; a printable audit report for managers; screen-reader testing with NVDA/VoiceOver beyond automated checks.

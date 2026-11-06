@@ -1,4 +1,8 @@
-import { workingDays, type Document } from "./domain";
+import { workingDays, type Document, type Status } from "./domain";
+
+type Queued = Pick<Document, "title" | "type" | "waitingSince" | "id"> & { status?: Status };
+/** Approved documents are finished: they have no waiting time. */
+const finished = (d: { status?: Status }) => d.status === "Approved";
 
 export type SortKey = "waiting-longest" | "waiting-shortest" | "title-asc" | "title-desc";
 export type Priority = "all" | "critical" | "urgent" | "recent";
@@ -64,7 +68,7 @@ export function filterDocuments<T extends Pick<Document, "title" | "type" | "wai
   });
 }
 
-export function sortDocuments<T extends Pick<Document, "title" | "waitingSince" | "id">>(docs: T[], sort: SortKey) {
+export function sortDocuments<T extends Pick<Document, "title" | "waitingSince" | "id"> & { status?: Status }>(docs: T[], sort: SortKey) {
   const byWait = (a: T, b: T) => Date.parse(a.waitingSince) - Date.parse(b.waitingSince);
   const byTitle = (a: T, b: T) => a.title.localeCompare(b.title, "en", { numeric: true });
   const compare =
@@ -75,18 +79,21 @@ export function sortDocuments<T extends Pick<Document, "title" | "waitingSince" 
         : sort === "title-asc"
           ? byTitle
           : (a: T, b: T) => byTitle(b, a);
-  return [...docs].sort((a, b) => compare(a, b) || a.id.localeCompare(b.id));
+  const waiting = sort.startsWith("waiting");
+  return [...docs].sort(
+    (a, b) => (waiting ? Number(finished(a)) - Number(finished(b)) : 0) || compare(a, b) || a.id.localeCompare(b.id),
+  );
 }
 
-export function applyQueue<T extends Pick<Document, "title" | "type" | "waitingSince" | "id">>(
+export function applyQueue<T extends Queued>(
   docs: T[],
   f: QueueFilters,
   now = new Date(),
 ) {
   const filtered = filterDocuments(docs, f);
   const counts = { all: filtered.length, critical: 0, urgent: 0, recent: 0 } as Record<Priority, number>;
-  filtered.forEach((d) => counts[priorityOf(d, now)]++);
-  const visible = f.priority === "all" ? filtered : filtered.filter((d) => priorityOf(d, now) === f.priority);
+  filtered.forEach((d) => !finished(d) && counts[priorityOf(d, now)]++);
+  const visible = f.priority === "all" ? filtered : filtered.filter((d) => !finished(d) && priorityOf(d, now) === f.priority);
   return { items: sortDocuments(visible, f.sort), counts };
 }
 

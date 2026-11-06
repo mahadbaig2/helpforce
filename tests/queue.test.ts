@@ -31,6 +31,15 @@ describe("approval queue", () => {
     expect(critical.items.map((d) => d.id)).toEqual(["HF-3"]);
   });
 
+  it("leaves approved documents out of waiting-time groups and sorts them last", () => {
+    const withApproved = [...docs, { id: "HF-4", title: "Old approved", type: "Policy" as const, waitingSince: daysAgo(40), status: "Approved" as const }];
+    expect(sortDocuments(withApproved, "waiting-longest").at(-1)?.id).toBe("HF-4");
+    const result = applyQueue(withApproved, { ...defaultFilters, priority: "critical" }, now);
+    expect(result.items.map((d) => d.id)).toEqual(["HF-3"]);
+    expect(result.counts.critical).toBe(1);
+    expect(result.counts.all).toBe(4);
+  });
+
   it("paginates 60+ items and clamps the page", () => {
     const many = Array.from({ length: 64 }, (_, i) => i);
     expect(paginate(many, 1)).toMatchObject({ pages: 5, start: 1, end: 15 });
