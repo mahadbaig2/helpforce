@@ -265,7 +265,20 @@ export default function DocumentView({ id }: { id: string }) {
               ),
             )}
             <div ref={endOfBody} className="end-of-body">
-              End of document text
+              <p>End of document text</p>
+              {deciding && (
+                <a
+                  href="#decision-heading"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const panel = document.getElementById("decision-heading");
+                    panel?.scrollIntoView({ block: "start" });
+                    panel?.closest("section")?.querySelector<HTMLInputElement>("input[type=checkbox]")?.focus({ preventScroll: true });
+                  }}
+                >
+                  Finished reading? Go to your decision ↑
+                </a>
+              )}
             </div>
           </section>
         </article>
