@@ -33,11 +33,11 @@ export default function QueueFilterBar({
           </select>
         </label>
         <label className="field">
-          <span>Reached this stage from</span>
+          <span>Reached stage from</span>
           <input type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => onChange({ from: e.target.value })} />
         </label>
         <label className="field">
-          <span>Reached this stage to</span>
+          <span>Reached stage to</span>
           <input type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => onChange({ to: e.target.value })} />
         </label>
         <label className="field">
