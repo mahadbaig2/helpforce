@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { NextRequest } from "next/server";
-import { ApiError, users } from "@/lib/domain";
+import { ApiError, users, type Document } from "@/lib/domain";
 import {
   createDocument,
   decide,
@@ -74,9 +76,24 @@ async function fields(req: NextRequest) {
     fileName,
   };
 }
-function samplePdf() {
-  const stream =
-    "BT /F1 18 Tf 72 720 Td (Helpforce supporting document) Tj /F1 11 Tf 0 -35 Td (Local sample PDF for review.) Tj ET\n";
+function samplePdf(doc: Document) {
+  const clean = (value: string) =>
+    value
+      .normalize("NFKD")
+      .replace(/[^\x20-\x7E]/g, "")
+      .replace(/[\\()]/g, "\\$&");
+  const lines = doc.body.split(/\s+/).reduce<string[]>((all, word) => {
+    const last = all.length - 1;
+    if (last < 0 || all[last].length + word.length + 1 > 85) all.push(word);
+    else all[last] += ` ${word}`;
+    return all;
+  }, []);
+  const stream = [
+    `BT /F1 17 Tf 54 738 Td (${clean(doc.title)}) Tj`,
+    `/F1 10 Tf 0 -24 Td (${clean(`${doc.type} document | ${doc.id}`)}) Tj`,
+    ...lines.slice(0, 55).map((line) => `0 -16 Td (${clean(line)}) Tj`),
+    "ET\n",
+  ].join("\n");
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -116,7 +133,14 @@ export async function GET(req: NextRequest, ctx: Context) {
       const doc = findDocument(path[1], user);
       if (!doc.attachment)
         throw new ApiError(404, "NOT_FOUND", "No attachment is available.");
-      const buffer = store.files.get(doc.id) ?? samplePdf();
+      const fixture = new Set(["HF-0101", "HF-0106", "HF-0111", "HF-0116"]);
+      const buffer =
+        store.files.get(doc.id) ??
+        (fixture.has(doc.id)
+          ? await readFile(
+              join(process.cwd(), "public", "seed-pdfs", `${doc.id}.pdf`),
+            )
+          : samplePdf(doc));
       return new Response(new Uint8Array(buffer), {
         headers: {
           "Content-Type": "application/pdf",

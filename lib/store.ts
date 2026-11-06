@@ -28,6 +28,12 @@ const globalStore = globalThis as typeof globalThis & {
 };
 
 function seed(): Store {
+  const fixtureSizes: Record<number, number> = {
+    0: 2557,
+    5: 2567,
+    10: 2565,
+    15: 2561,
+  };
   const titles = [
     "Procurement policy update",
     "Quarterly budget release",
@@ -119,8 +125,10 @@ function seed(): Store {
       ...(index % 5 === 0
         ? {
             attachment: {
-              name: "Supporting-document.pdf",
-              size: 1200,
+              name: fixtureSizes[index]
+                ? `HF-${String(index + 101).padStart(4, "0")}.pdf`
+                : "Supporting-document.pdf",
+              size: fixtureSizes[index] ?? 1200,
               mime: "application/pdf",
             },
           }

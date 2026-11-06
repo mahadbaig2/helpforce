@@ -1571,3 +1571,437 @@ td small {
     width: 100%;
   }
 }
+
+/* Sidebar navigation and a compact, filterable queue. */
+.workspace-bar {
+  display: none;
+}
+.mobile-navigation {
+  display: none;
+}
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.heading-actions .refresh-button {
+  margin: 0;
+  padding: 12px 2px;
+}
+.home-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 36px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+}
+.home-stats > div {
+  display: grid;
+  gap: 7px;
+  padding: 23px 26px;
+  border-right: 1px solid var(--line);
+}
+.home-stats > div:last-child {
+  border-right: 0;
+}
+.home-stats span {
+  font-size: 12px;
+  color: #4d6674;
+  font-weight: 700;
+}
+.home-stats strong {
+  font-size: 31px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.home-stats small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.recent-list {
+  margin-top: 25px;
+  border-top: 1px solid var(--line);
+}
+.recent-list button {
+  width: 100%;
+  display: grid;
+  gap: 7px;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+.recent-list button:hover strong {
+  color: var(--blue);
+}
+.recent-list strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+.recent-list span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.review-browser {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 28px 30px;
+}
+.review-browser-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.review-browser-head .muted {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+.review-browser-head > span {
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.review-filters {
+  display: grid;
+  grid-template-columns: minmax(190px, 2fr) repeat(4, minmax(125px, 1fr));
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.review-filters label {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #435a68;
+}
+.review-filters input,
+.review-filters select {
+  width: 100%;
+  height: 42px;
+  min-width: 0;
+  border: 1px solid #cbd9df;
+  border-radius: 7px;
+  background: #fff;
+  padding: 0 10px;
+  color: var(--ink);
+}
+.priority-pills {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+}
+.priority-pills button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 15px;
+  border: 1px solid #d6e1e6;
+  border-radius: 999px;
+  background: #f8fafb;
+  color: #47606e;
+  font-size: 13px;
+  font-weight: 700;
+}
+.priority-pills button.active {
+  background: #183e55;
+  border-color: #183e55;
+  color: #fff;
+}
+.priority-pills button.active.critical {
+  background: #a44040;
+  border-color: #a44040;
+}
+.priority-pills button.active.urgent {
+  background: #925d15;
+  border-color: #925d15;
+}
+.priority-pills button span {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e4edf1;
+  color: #3c5664;
+  font-size: 11px;
+}
+.priority-pills button.active span {
+  background: #ffffff30;
+  color: #fff;
+}
+.priority-description {
+  margin: 18px 0 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.review-results .review-item:first-child {
+  border-top: 0;
+}
+.waiting-flag {
+  color: #9b4a23;
+  font-weight: 700;
+}
+
+/* The original file or body stays wide; decisions, summary and history share one rail. */
+.detail-grid {
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+}
+.detail-grid > .document-column {
+  display: block;
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+}
+.detail-grid .paper {
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 0;
+  padding: 28px;
+}
+.detail-grid > .review-rail {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  grid-column: 2;
+  grid-row: 1;
+  position: static;
+}
+.detail-grid .panel {
+  margin: 0;
+}
+.detail-grid .audit {
+  grid-column: auto;
+  grid-row: auto;
+  padding: 24px;
+}
+.pdf-preview {
+  margin-top: 2px;
+  border: 1px solid #d7e1e6;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #eef2f4;
+}
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  min-height: 48px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #d7e1e6;
+  background: #f8fafb;
+  font-size: 12px;
+  font-weight: 700;
+  color: #425c6a;
+}
+.pdf-toolbar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-toolbar a {
+  flex: none;
+  font-size: 12px;
+}
+.pdf-preview iframe {
+  display: block;
+  width: 100%;
+  height: min(74vh, 900px);
+  min-height: 600px;
+  border: 0;
+  background: #fff;
+}
+.pdf-fallback {
+  padding: 10px 15px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pdf-toolbar strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdf-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+.pdf-controls button {
+  border: 1px solid #cfdae0;
+  border-radius: 5px;
+  background: #fff;
+  color: #254658;
+  min-width: 28px;
+  height: 28px;
+  font-size: 17px;
+  line-height: 1;
+}
+.pdf-controls span {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #4e6572;
+}
+.pdf-controls a {
+  margin-left: 7px;
+  white-space: nowrap;
+}
+.pdf-stage {
+  min-width: 0;
+  max-height: 76vh;
+  min-height: 560px;
+  overflow: auto;
+  padding: 16px;
+  text-align: center;
+  background: #e9eef1;
+}
+.pdf-stage canvas {
+  display: block;
+  max-width: none;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 5px 18px #132c3c24;
+}
+.pdf-loading {
+  margin: 30px auto;
+  color: #3e5968;
+  font-size: 13px;
+}
+.source-body {
+  margin-top: 30px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.source-body-heading h3 {
+  font-size: 16px;
+  margin: 0 0 5px;
+}
+.source-body-heading p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+.review-rail .timeline {
+  margin-top: 22px;
+}
+.review-rail .timeline li {
+  padding-bottom: 22px;
+}
+@media (max-width: 1200px) {
+  .review-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .review-search {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 1000px) {
+  .home-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .home-stats > div:nth-child(2) {
+    border-right: 0;
+  }
+  .home-stats > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+  }
+}
+@media (max-width: 780px) {
+  .mobile-header > div {
+    display: flex;
+    gap: 18px;
+  }
+  .mobile-navigation {
+    display: grid;
+    padding: 9px 18px 16px;
+    background: #172d3c;
+    border-top: 1px solid #385263;
+  }
+  .mobile-navigation button {
+    width: 100%;
+    padding: 12px 8px;
+    border: 0;
+    border-bottom: 1px solid #385263;
+    background: transparent;
+    color: #e4edf3;
+    text-align: left;
+    font-size: 14px;
+  }
+  .mobile-navigation button:last-child {
+    border-bottom: 0;
+  }
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-grid > .document-column,
+  .detail-grid > .review-rail {
+    grid-column: 1;
+  }
+  .detail-grid > .review-rail {
+    grid-row: 2;
+  }
+  .review-browser {
+    padding: 22px;
+  }
+  .review-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .review-search {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 540px) {
+  .home-stats > div {
+    padding: 17px;
+  }
+  .home-stats strong {
+    font-size: 25px;
+  }
+  .review-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .review-filters label:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+  .pdf-preview iframe {
+    height: 65vh;
+    min-height: 450px;
+  }
+  .pdf-toolbar {
+    align-items: start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .heading-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .pdf-toolbar {
+    align-items: stretch;
+  }
+  .pdf-controls {
+    flex-wrap: wrap;
+  }
+  .pdf-stage {
+    min-height: 400px;
+    max-height: 70vh;
+    padding: 9px;
+  }
+}

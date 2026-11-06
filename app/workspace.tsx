@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import PdfPreview from "@/components/pdf-preview";
 import {
   useCallback,
   useEffect,
@@ -52,14 +53,12 @@ const role = (u: User) =>
 const reasonFor = (d: Document) =>
   [...d.audit].reverse().find((e) => e.action === "rejected")?.reason;
 const reviewGroups = [
-  {
-    id: "critical",
-    title: "Critical",
-    detail: "Waiting more than 10 working days",
-  },
-  { id: "urgent", title: "Urgent", detail: "Waiting 6–10 working days" },
-  { id: "recent", title: "Recent", detail: "Waiting up to 5 working days" },
+  { id: "critical", title: "Critical", detail: "More than 10 working days" },
+  { id: "urgent", title: "Urgent", detail: "6–10 working days" },
+  { id: "recent", title: "Recent", detail: "Up to 5 working days" },
+  { id: "all", title: "All", detail: "Every item needing your action" },
 ] as const;
+type ReviewTab = (typeof reviewGroups)[number]["id"];
 const reviewGroup = (d: Document) => {
   const days = workingDays(d.waitingSince);
   return days > 10 ? "critical" : days > 5 ? "urgent" : "recent";
@@ -78,8 +77,9 @@ export default function WorkspaceApp({
   const [view, setView] = useState<View>("list"),
     [busy, setBusy] = useState(true);
   const [workspace, setWorkspace] = useState<Workspace>(initialWorkspace);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedLanes, setExpandedLanes] = useState<string[]>([]);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [reviewTab, setReviewTab] = useState<ReviewTab>("critical");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const [search, setSearch] = useState(""),
@@ -164,6 +164,7 @@ export default function WorkspaceApp({
     router.push("/");
   }
   function goWorkspace(next: Workspace) {
+    setMobileMenuOpen(false);
     setWorkspace(next);
     setView("list");
     setPage(1);
@@ -173,6 +174,7 @@ export default function WorkspaceApp({
     setTo("");
     setError("");
     setSort("newest");
+    if (next === "inbox") setReviewTab("critical");
     router.push(
       next === "home"
         ? "/"
@@ -339,6 +341,11 @@ export default function WorkspaceApp({
     ((user.role === "officer" && doc.status === "Pending Officer") ||
       (user.role === "senior" && doc.status === "Pending Senior Officer"));
   const actionItems = user ? matching.filter((d) => needsAction(user, d)) : [];
+  const tabItems = actionItems.filter(
+    (d) => reviewTab === "all" || reviewGroup(d) === reviewTab,
+  );
+  const reviewPages = Math.max(1, Math.ceil(tabItems.length / 12));
+  const reviewPage = Math.min(page, reviewPages);
   const renderReviewItem = (d: Document) => (
     <article className="review-item" key={d.id}>
       <div className="review-item-main">
@@ -355,6 +362,9 @@ export default function WorkspaceApp({
             ? "Returned for changes"
             : `Submitted by ${accounts.find((a) => a.id === d.ownerId)?.name ?? "Clerk"}`}{" "}
           · {workingDays(d.waitingSince)} working days in this stage
+          {workingDays(d.waitingSince) > 5 && (
+            <span className="waiting-flag"> · Over 5 working days</span>
+          )}
         </p>
       </div>
       <button
@@ -482,28 +492,48 @@ export default function WorkspaceApp({
       <main className="main">
         <div className="mobile-header">
           <strong>Helpforce</strong>
-          <button onClick={signOut}>Sign out</button>
+          <div>
+            <button
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+              onClick={() => setMobileMenuOpen((value) => !value)}
+            >
+              {mobileMenuOpen ? "Close menu" : "Menu"}
+            </button>
+            <button onClick={signOut}>Sign out</button>
+          </div>
         </div>
-        <header className="topbar">
-          Workspace <span>/</span>{" "}
-          {view === "list"
-            ? workspace === "home"
-              ? "Home"
-              : workspace === "all"
-                ? "All documents"
-                : workspace === "pipeline"
-                  ? "Document pipeline"
-                  : workspace === "handled"
-                    ? "My decisions"
-                    : user.role === "clerk"
-                      ? "Needs attention"
-                      : "My review queue"
-            : view === "create"
-              ? "New document"
-              : view === "edit"
-                ? "Edit document"
-                : doc?.id}
-        </header>
+        {mobileMenuOpen && (
+          <nav
+            id="mobile-navigation"
+            className="mobile-navigation"
+            aria-label="Mobile navigation"
+          >
+            <button onClick={() => goWorkspace("home")}>Home</button>
+            <button onClick={() => goWorkspace("inbox")}>
+              {user.role === "clerk" ? "Needs attention" : "My reviews"}
+            </button>
+            <button onClick={() => goWorkspace("pipeline")}>
+              Document pipeline
+            </button>
+            {user.role !== "clerk" && (
+              <button onClick={() => goWorkspace("handled")}>
+                My decisions
+              </button>
+            )}
+            <button onClick={() => goWorkspace("all")}>All documents</button>
+            {user.role === "clerk" && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  editor();
+                }}
+              >
+                Create document
+              </button>
+            )}
+          </nav>
+        )}
         <div className="content">
           {notice && (
             <div className="alert success" role="status">
@@ -523,6 +553,51 @@ export default function WorkspaceApp({
           )}
           {view === "list" && (
             <>
+              {workspace === "home" && (
+                <section
+                  className="home-stats"
+                  aria-label="Document statistics"
+                >
+                  <div>
+                    <span>Needs action</span>
+                    <strong>
+                      {items.filter((d) => needsAction(user, d)).length}
+                    </strong>
+                    <small>
+                      {user.role === "clerk"
+                        ? "Returned to you"
+                        : "Waiting for your decision"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>In review</span>
+                    <strong>
+                      {
+                        items.filter(
+                          (d) =>
+                            d.status === "Pending Officer" ||
+                            d.status === "Pending Senior Officer",
+                        ).length
+                      }
+                    </strong>
+                    <small>At either approval stage</small>
+                  </div>
+                  <div>
+                    <span>Returned</span>
+                    <strong>
+                      {items.filter((d) => d.status === "Returned").length}
+                    </strong>
+                    <small>Awaiting Clerk changes</small>
+                  </div>
+                  <div>
+                    <span>Approved</span>
+                    <strong>
+                      {items.filter((d) => d.status === "Approved").length}
+                    </strong>
+                    <small>Final and locked</small>
+                  </div>
+                </section>
+              )}
               <div className="heading">
                 <div>
                   <p className="eyebrow">
@@ -557,66 +632,19 @@ export default function WorkspaceApp({
                             : "Browse every document you can access."}
                   </p>
                 </div>
-                {user.role === "clerk" && (
-                  <button className="button primary" onClick={() => editor()}>
-                    ＋ Create document
-                  </button>
-                )}
-              </div>
-              <div className="workspace-bar">
-                <div className="workspace-tabs" aria-label="Document views">
+                <div className="heading-actions">
                   <button
-                    aria-pressed={workspace === "home"}
-                    className={workspace === "home" ? "selected" : ""}
-                    onClick={() => goWorkspace("home")}
+                    className="refresh-button"
+                    onClick={() => loadList().catch((e) => setError(e.message))}
                   >
-                    Home
+                    ↻ Refresh
                   </button>
-                  <button
-                    aria-pressed={workspace === "inbox"}
-                    className={workspace === "inbox" ? "selected" : ""}
-                    onClick={() => goWorkspace("inbox")}
-                  >
-                    {user.role === "clerk"
-                      ? "Needs attention"
-                      : "My review queue"}{" "}
-                    <span>
-                      {items.filter((d) => needsAction(user, d)).length}
-                    </span>
-                  </button>
-                  <button
-                    aria-pressed={workspace === "pipeline"}
-                    className={workspace === "pipeline" ? "selected" : ""}
-                    onClick={() => goWorkspace("pipeline")}
-                  >
-                    Pipeline
-                  </button>
-                  {user.role !== "clerk" && (
-                    <button
-                      aria-pressed={workspace === "handled"}
-                      className={workspace === "handled" ? "selected" : ""}
-                      onClick={() => goWorkspace("handled")}
-                    >
-                      My decisions{" "}
-                      <span>
-                        {items.filter((d) => handledBy(user, d)).length}
-                      </span>
+                  {user.role === "clerk" && (
+                    <button className="button primary" onClick={() => editor()}>
+                      ＋ Create document
                     </button>
                   )}
-                  <button
-                    aria-pressed={workspace === "all"}
-                    className={workspace === "all" ? "selected" : ""}
-                    onClick={() => goWorkspace("all")}
-                  >
-                    All documents
-                  </button>
                 </div>
-                <button
-                  className="refresh-button"
-                  onClick={() => loadList().catch((e) => setError(e.message))}
-                >
-                  ↻ Refresh
-                </button>
               </div>
               {workspace === "home" && (
                 <div className="home-grid">
@@ -660,99 +688,181 @@ export default function WorkspaceApp({
                     )}
                   </section>
                   <aside className="home-card home-progress">
-                    <p className="eyebrow">AT A GLANCE</p>
-                    <h2>Document flow</h2>
+                    <p className="eyebrow">LATEST ACTIVITY</p>
+                    <h2>Recently updated</h2>
                     <p className="muted">
-                      Current stage of {user.role === "clerk" ? "your" : "all"}{" "}
-                      documents
+                      Newest document changes across your workspace.
                     </p>
-                    <div className="home-status-list">
-                      {statuses.map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => goWorkspace("pipeline")}
-                        >
-                          <span
-                            className={`status-dot ${status.replaceAll(" ", "-").toLowerCase()}`}
-                          />
-                          <span>{status}</span>
-                          <strong>
-                            {items.filter((d) => d.status === status).length}
-                          </strong>
+                    <div className="recent-list">
+                      {matching.slice(0, 4).map((d) => (
+                        <button key={d.id} onClick={() => open(d.id)}>
+                          <strong>{d.title}</strong>
+                          <span>
+                            {d.status} · {date(d.updatedAt)}
+                          </span>
                         </button>
                       ))}
                     </div>
                     <button
                       className="home-more"
-                      onClick={() => goWorkspace("pipeline")}
+                      onClick={() => goWorkspace("all")}
                     >
-                      Open pipeline →
+                      Browse all documents →
                     </button>
                   </aside>
                 </div>
               )}
               {workspace === "inbox" && (
-                <section
-                  className="review-groups"
-                  aria-label="Reviews by time waiting"
-                >
-                  <div className="review-groups-intro">
+                <section className="review-browser" aria-label="Review queue">
+                  <div className="review-browser-head">
                     <div>
-                      <p className="eyebrow">PRIORITY BY WAIT TIME</p>
-                      <h2>Work through your queue</h2>
+                      <p className="eyebrow">REVIEW QUEUE</p>
+                      <h2>Find the next document</h2>
                       <p className="muted">
-                        Critical and urgent groups appear first. Documents
-                        within each group are newest first.
+                        Priorities use working days at the current stage. Newest
+                        updates appear first.
                       </p>
                     </div>
-                    <span>{actionItems.length} total</span>
+                    <span>{actionItems.length} matching</span>
                   </div>
-                  {reviewGroups.map((group) => {
-                    const groupItems = actionItems.filter(
-                      (d) => reviewGroup(d) === group.id,
-                    );
-                    const expanded = expandedGroups.includes(group.id);
-                    return (
-                      <section
-                        className={`review-group ${group.id}`}
-                        key={group.id}
-                        aria-label={`${group.title}: ${groupItems.length} documents`}
+                  <div className="review-filters">
+                    <label className="review-search">
+                      Search by title
+                      <input
+                        value={search}
+                        onChange={(e) => {
+                          setSearch(e.target.value);
+                          setPage(1);
+                        }}
+                        placeholder="Search documents…"
+                      />
+                    </label>
+                    <label>
+                      Type
+                      <select
+                        value={filter}
+                        onChange={(e) => {
+                          setFilter(e.target.value);
+                          setPage(1);
+                        }}
                       >
-                        <div className="review-group-head">
-                          <div>
-                            <h3>
-                              {group.title} <span>{groupItems.length}</span>
-                            </h3>
-                            <p>{group.detail}</p>
-                          </div>
-                        </div>
-                        {groupItems.length ? (
-                          groupItems
-                            .slice(0, expanded ? undefined : 4)
-                            .map(renderReviewItem)
-                        ) : (
-                          <p className="group-empty">Nothing waiting here.</p>
-                        )}
-                        {groupItems.length > 4 && (
-                          <button
-                            className="home-more"
-                            onClick={() =>
-                              setExpandedGroups((value) =>
-                                expanded
-                                  ? value.filter((id) => id !== group.id)
-                                  : [...value, group.id],
-                              )
-                            }
-                          >
-                            {expanded
-                              ? "Show fewer"
-                              : `Show all ${groupItems.length}`}{" "}
-                            →
-                          </button>
-                        )}
-                      </section>
-                    );
-                  })}
+                        <option value="all">All types</option>
+                        {types.map((t) => (
+                          <option key={t}>{t}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      From
+                      <input
+                        type="date"
+                        value={from}
+                        onChange={(e) => {
+                          setFrom(e.target.value);
+                          setPage(1);
+                        }}
+                      />
+                    </label>
+                    <label>
+                      To
+                      <input
+                        type="date"
+                        value={to}
+                        onChange={(e) => {
+                          setTo(e.target.value);
+                          setPage(1);
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Sort
+                      <select
+                        value={sort}
+                        onChange={(e) => {
+                          setSort(e.target.value);
+                          setPage(1);
+                        }}
+                      >
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div
+                    className="priority-pills"
+                    role="group"
+                    aria-label="Filter by waiting time"
+                  >
+                    {reviewGroups.map((group) => {
+                      const count =
+                        group.id === "all"
+                          ? actionItems.length
+                          : actionItems.filter(
+                              (d) => reviewGroup(d) === group.id,
+                            ).length;
+                      return (
+                        <button
+                          key={group.id}
+                          className={
+                            reviewTab === group.id ? `active ${group.id}` : ""
+                          }
+                          aria-pressed={reviewTab === group.id}
+                          title={group.detail}
+                          onClick={() => {
+                            setReviewTab(group.id);
+                            setPage(1);
+                          }}
+                        >
+                          {group.title}
+                          <span>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="priority-description">
+                    {
+                      reviewGroups.find((group) => group.id === reviewTab)
+                        ?.detail
+                    }{" "}
+                    · {tabItems.length} document
+                    {tabItems.length === 1 ? "" : "s"}
+                  </p>
+                  <div className="review-results">
+                    {tabItems.length ? (
+                      tabItems
+                        .slice((reviewPage - 1) * 12, reviewPage * 12)
+                        .map(renderReviewItem)
+                    ) : (
+                      <div className="home-empty">
+                        <strong>No documents in this view.</strong>
+                        <p>
+                          Choose another priority or adjust your search and
+                          filters.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {reviewPages > 1 && (
+                    <div className="pagination">
+                      <span>
+                        Page {reviewPage} of {reviewPages}
+                      </span>
+                      <div>
+                        <button
+                          disabled={reviewPage <= 1}
+                          onClick={() => setPage(reviewPage - 1)}
+                        >
+                          Previous
+                        </button>
+                        <button
+                          disabled={reviewPage >= reviewPages}
+                          onClick={() => setPage(reviewPage + 1)}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
               {workspace === "pipeline" && (
@@ -1282,71 +1392,50 @@ export default function WorkspaceApp({
                 </div>
               )}
               <div className="detail-grid">
-                <div>
+                <div className="document-column">
                   <section className="panel paper">
                     <div className="section-head">
                       <div>
                         <p className="eyebrow">OFFICIAL DOCUMENT</p>
-                        <h2>Document content</h2>
+                        <h2>
+                          {doc.attachment
+                            ? doc.attachment.name
+                            : "Document body"}
+                        </h2>
                       </div>
                       <span className="muted">Version {doc.version}</span>
                     </div>
-                    {doc.body.split(/\n\s*\n/).map((p, i) => (
-                      <p
-                        className="body-paragraph"
-                        id={`paragraph-${i}`}
-                        tabIndex={-1}
-                        key={i}
-                      >
-                        {p}
-                      </p>
-                    ))}
-                  </section>
-                  {doc.attachment && (
-                    <section className="panel attachment">
-                      <div className="section-head">
-                        <div>
-                          <p className="eyebrow">ATTACHMENT</p>
-                          <h2>{doc.attachment.name}</h2>
-                        </div>
-                        <a
-                          href={`/api/documents/${doc.id}/attachment`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Open PDF ↗
-                        </a>
-                      </div>
-                      <iframe
-                        title={`Preview of ${doc.attachment.name}`}
-                        src={`/api/documents/${doc.id}/attachment`}
+                    {doc.attachment && (
+                      <PdfPreview
+                        key={`${doc.id}-${doc.version}`}
+                        url={`/api/documents/${doc.id}/attachment`}
+                        name={doc.attachment.name}
                       />
-                    </section>
-                  )}
-                  <section className="panel audit">
-                    <p className="eyebrow">RECORD OF ACTIVITY</p>
-                    <h2>Document history</h2>
-                    <ol className="timeline">
-                      {[...doc.audit].reverse().map((event) => (
-                        <li key={event.id}>
-                          <strong>
-                            {event.actor} {event.action}
-                          </strong>
-                          <time>{dateTime(event.at)}</time>
+                    )}
+                    <div className={doc.attachment ? "source-body" : ""}>
+                      {doc.attachment && (
+                        <div className="source-body-heading">
+                          <h3>Original document body</h3>
                           <p>
-                            {event.from
-                              ? `${event.from} → ${event.to}`
-                              : `Submitted for review · ${event.to}`}
+                            Read this with the PDF. AI summary source links lead
+                            here.
                           </p>
-                          {event.reason && (
-                            <blockquote>“{event.reason}”</blockquote>
-                          )}
-                        </li>
+                        </div>
+                      )}
+                      {doc.body.split(/\n\s*\n/).map((p, i) => (
+                        <p
+                          className="body-paragraph"
+                          id={`paragraph-${i}`}
+                          tabIndex={-1}
+                          key={i}
+                        >
+                          {p}
+                        </p>
                       ))}
-                    </ol>
+                    </div>
                   </section>
                 </div>
-                <aside>
+                <aside className="review-rail">
                   {!canDecide && user.role !== "clerk" && (
                     <section className="panel context-panel">
                       <p className="eyebrow">CURRENT STATE</p>
@@ -1459,6 +1548,28 @@ export default function WorkspaceApp({
                       )}
                     </section>
                   )}
+                  <section className="panel audit">
+                    <p className="eyebrow">RECORD OF ACTIVITY</p>
+                    <h2>Document history</h2>
+                    <ol className="timeline">
+                      {[...doc.audit].reverse().map((event) => (
+                        <li key={event.id}>
+                          <strong>
+                            {event.actor} {event.action}
+                          </strong>
+                          <time>{dateTime(event.at)}</time>
+                          <p>
+                            {event.from
+                              ? `${event.from} → ${event.to}`
+                              : `Submitted for review · ${event.to}`}
+                          </p>
+                          {event.reason && (
+                            <blockquote>“{event.reason}”</blockquote>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
                 </aside>
               </div>
             </>
