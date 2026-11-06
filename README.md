@@ -2,7 +2,7 @@
 
 Clerk → Officer → Senior Officer approvals with a local mock API (Next.js 16, React 19, TypeScript). Fully offline: system fonts, bundled PDF.js worker, no external requests (verified with all non-localhost traffic blocked).
 
-**Run** (Node 20.9+): `npm install && npm run dev`, then open http://localhost:3000 and pick an account: Ayesha Khan or Bilal Ahmed (Clerks), Sara Malik (Officer), Omar Farooq (Senior Officer). **Tests:** `npm test` runs 47 Vitest tests (rules, queue, seed, API errors, UI in jsdom). `npm run test:e2e` runs 5 Playwright tests on a production build (approval, 409 conflict, 403, failed upload, expired session, axe-core and no external requests; first run `npx playwright install chromium`). Lint and build pass. Data is in memory and resets on restart. Screenshots are at the end.
+**Run** (Node 20.9+): `npm install && npm run dev`, then open http://localhost:3000 and pick an account: Ayesha Khan or Bilal Ahmed (Clerks), Sara Malik (Officer), Omar Farooq (Senior Officer). **Tests:** `npm test` runs 48 Vitest tests (rules, queue, seed, API errors, UI in jsdom). `npm run test:e2e` runs 5 Playwright tests on a production build (approval, 409 conflict, 403, failed upload, expired session, axe-core and no external requests; first run `npx playwright install chromium`). Lint and build pass. Data is in memory and resets on restart. Screenshots are at the end.
 
 ## Design decisions
 - **Server enforces everything.** `lib/api-handler.ts` checks session, role, ownership, status and the version the user saw; hiding buttons is only a convenience. Rules are pure functions in `lib/domain.ts`.
@@ -44,7 +44,7 @@ Persist data (SQLite); run both test suites in CI; public holidays in working da
 
 ![Confirm return dialog](screenshots/3-confirm-return.png)
 
-**Audit history:** plain sentences with roles, timing, status changes and reasons.
+**Audit history:** one document's full life: created, returned by the Officer, resubmitted, returned by the Senior Officer, resubmitted, then final approval, with roles, timing, status changes and reasons.
 
 ![Audit history](screenshots/4-audit-history.png)
 

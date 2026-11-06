@@ -19,9 +19,7 @@ export function WaitingTime({ doc }: { doc: Pick<Document, "waitingSince" | "sta
   const level = priorityOf(doc);
   return (
     <span className="waiting">
-      <span>
-        {days} working {days === 1 ? "day" : "days"}
-      </span>
+      <span>{days === 0 ? "Under 1 working day" : `${days} working ${days === 1 ? "day" : "days"}`}</span>
       {isOverdue(doc) && (
         <span className={`flag flag-${level}`}>
           <WarningIcon />

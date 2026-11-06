@@ -5,6 +5,7 @@ import {
   checkVersion,
   describeEvent,
   documentErrors,
+  elapsed,
   fileError,
   handledBy,
   needsAction,
@@ -116,6 +117,16 @@ describe("AI summary points", () => {
       { paragraph: 1, section: "Purpose", text: "The office needs four new laptops" },
       { paragraph: 3, section: "Cost", text: "The total cost is PKR 840,000 for all four" },
     ]);
+  });
+});
+
+describe("time between steps", () => {
+  it("says how long passed in plain words", () => {
+    const at = (min: number) => new Date(Date.UTC(2026, 10, 2, 9, min)).toISOString();
+    expect(elapsed(at(0), at(0))).toBe("less than a minute");
+    expect(elapsed(at(0), at(1))).toBe("1 minute");
+    expect(elapsed(at(0), at(45))).toBe("45 minutes");
+    expect(elapsed(at(0), new Date(Date.UTC(2026, 10, 5, 9)).toISOString())).toBe("3 days");
   });
 });
 

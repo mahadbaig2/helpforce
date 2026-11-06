@@ -13,7 +13,7 @@ import {
   type Document,
 } from "@/lib/domain";
 import { api, ApiFailure } from "@/lib/client/api";
-import { applyQueue } from "@/lib/queue";
+import { applyQueue, defaultFilters } from "@/lib/queue";
 import PdfPreview from "./pdf-preview";
 import { useApp } from "./app-provider";
 import AuditTimeline from "./audit-timeline";
@@ -180,10 +180,11 @@ export default function DocumentView({ id }: { id: string }) {
   function decided(updated: Document, decision: "approve" | "reject") {
     setLoad({ phase: "ready", doc: updated });
     void refreshDocuments();
-    const next = applyQueue(
-      documents.filter((d) => d.id !== updated.id && needsAction(user, d)),
-      { ...filters, priority: "all" },
-    ).items[0];
+    // Next item in the reviewer's current view; if their filters leave nothing, the next in the whole queue.
+    const remaining = documents.filter((d) => d.id !== updated.id && needsAction(user, d));
+    const next =
+      applyQueue(remaining, { ...filters, priority: "all" }).items[0] ??
+      applyQueue(remaining, { ...defaultFilters, sort: filters.sort }).items[0];
     setOutcome({
       text:
         decision === "reject"

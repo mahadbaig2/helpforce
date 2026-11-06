@@ -331,7 +331,8 @@ export const isAiEvent = (event: Pick<Audit, "action">) =>
 /** Human duration such as "3 days" or "5 hours". */
 export function elapsed(fromIso: string, toIso: string) {
   const minutes = Math.max(0, Math.round((Date.parse(toIso) - Date.parse(fromIso)) / 60000));
-  if (minutes < 60) return minutes <= 1 ? "1 minute" : `${minutes} minutes`;
+  if (minutes < 1) return "less than a minute";
+  if (minutes < 60) return minutes === 1 ? "1 minute" : `${minutes} minutes`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return hours === 1 ? "1 hour" : `${hours} hours`;
   const days = Math.round(hours / 24);

@@ -22,6 +22,8 @@ export default function PageHeader({
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
+    // A new screen starts at the top, with focus on its heading.
+    window.scrollTo(0, 0);
     heading.current?.focus({ preventScroll: true });
   }, [title]);
   return (

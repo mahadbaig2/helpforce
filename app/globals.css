@@ -1199,8 +1199,8 @@ textarea {
   border-color: transparent;
   background: var(--success-soft);
 }
-.outcome:focus {
-  outline: 3px solid var(--focus);
+.outcome:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* AI summary: purple, dashed, clearly not the document. */
