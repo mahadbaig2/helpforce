@@ -252,7 +252,7 @@ export default function DocumentView({ id }: { id: string }) {
             </section>
           )}
           <section aria-label="Document text" className="paper-body">
-            {current.attachment && <h3>Document text</h3>}
+            <h3 className={current.attachment ? undefined : "visually-hidden"}>Document text</h3>
             {parts.map((text, i) =>
               text.length <= 60 && !/[.!?:]$/.test(text) ? (
                 <h4 key={i} id={`para-${i}`} tabIndex={-1} className={cited === i ? "cited" : undefined}>

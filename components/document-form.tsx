@@ -102,24 +102,22 @@ function Editor({ doc }: { doc?: Document }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState("");
   const [restored, setRestored] = useState<string | null>(initial.restored);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const summary = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Copy what is typed to this device shortly after each change.
+  // Copy what is typed to this device on every change (a few KB, so no debounce):
+  // a failed upload, expired session, refresh or crash can never lose it.
+  const [draftSaved, setDraftSaved] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (title || body) {
-        if (saveDraft(user.id, doc?.id, { title, body, type })) setSavedAt(new Date().toISOString());
-      }
-    }, 400);
-    return () => clearTimeout(timer);
+    if (title || body) saveDraft(user.id, doc?.id, { title, body, type });
   }, [title, body, type, user.id, doc?.id]);
 
+  // After each submit attempt, move focus to the error summary if there is one.
+  const [attempts, setAttempts] = useState(0);
   useEffect(() => {
-    if (Object.keys(errors).length || formError) summary.current?.focus();
-  }, [errors, formError]);
+    if (attempts) summary.current?.focus();
+  }, [attempts]);
 
   function discardDraft() {
     clearDraft(user.id, doc?.id);
@@ -128,6 +126,11 @@ function Editor({ doc }: { doc?: Document }) {
     setType(doc?.type ?? "");
     setRestored(null);
   }
+
+  const edit = (set: (value: string) => void) => (value: string) => {
+    set(value);
+    setDraftSaved(true);
+  };
 
   function chooseFile(next: File | null) {
     setFile(next);
@@ -140,6 +143,7 @@ function Editor({ doc }: { doc?: Document }) {
     setFormError("");
     if (Object.keys(found).length) {
       setErrors(found);
+      setAttempts((n) => n + 1);
       return;
     }
     setErrors({});
@@ -176,6 +180,7 @@ function Editor({ doc }: { doc?: Document }) {
       } else {
         setFormError(`${failure.message} Nothing was submitted. Your text is still here, so you can try again.`);
       }
+      setAttempts((n) => n + 1);
     } finally {
       setSubmitting(false);
     }
@@ -214,7 +219,7 @@ function Editor({ doc }: { doc?: Document }) {
           </button>
         </div>
       )}
-      {(errorList.length > 0 || formError) && (
+      {attempts > 0 && (errorList.length > 0 || formError) && (
         <div className="error-summary" role="alert" tabIndex={-1} ref={summary} aria-labelledby="error-summary-title">
           <h2 id="error-summary-title">{formError || "Please fix the following"}</h2>
           {errorList.length > 0 && (
@@ -239,7 +244,7 @@ function Editor({ doc }: { doc?: Document }) {
             maxLength={MAX_TITLE + 50}
             aria-invalid={!!errors.title}
             aria-describedby={describedBy("title", "title-count")}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => edit(setTitle)(e.target.value)}
             autoComplete="off"
           />
           <p id="title-count" className={`hint ${title.trim().length > MAX_TITLE ? "over" : ""}`}>
@@ -249,7 +254,7 @@ function Editor({ doc }: { doc?: Document }) {
         </div>
         <div className="field">
           <label htmlFor="field-type">Document type (required)</label>
-          <select id="field-type" value={type} aria-invalid={!!errors.type} aria-describedby={describedBy("type")} onChange={(e) => setType(e.target.value)}>
+          <select id="field-type" value={type} aria-invalid={!!errors.type} aria-describedby={describedBy("type")} onChange={(e) => edit(setType)(e.target.value)}>
             <option value="">Choose a type</option>
             {types.map((t) => (
               <option key={t}>{t}</option>
@@ -265,7 +270,7 @@ function Editor({ doc }: { doc?: Document }) {
             value={body}
             aria-invalid={!!errors.body}
             aria-describedby={describedBy("body", "body-hint")}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(e) => edit(setBody)(e.target.value)}
           />
           <p id="body-hint" className="hint">
             Use a blank line between paragraphs. A short line on its own becomes a section heading.
@@ -296,7 +301,7 @@ function Editor({ doc }: { doc?: Document }) {
         </div>
         <div className="form-actions">
           <p className="hint" aria-live="polite">
-            {savedAt ? `Draft saved on this device at ${new Date(savedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}
+            {draftSaved ? "Draft saved on this device as you type." : ""}
           </p>
           <Link className="button secondary" href={doc ? `/documents/${doc.id}` : "/documents"}>
             Cancel

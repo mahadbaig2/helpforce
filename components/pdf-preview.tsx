@@ -170,6 +170,8 @@ export default function PdfPreview({
       <div
         className="pdf-stage"
         ref={frame}
+        role="region"
+        tabIndex={0}
         aria-label={`PDF preview of ${name}`}
       >
         {loading && !error && (

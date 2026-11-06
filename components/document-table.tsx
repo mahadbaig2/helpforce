@@ -52,7 +52,7 @@ export default function DocumentTable({ docs, caption, showStatus = true }: { do
                   <span className="doc-meta">
                     {d.id} · {ownerName(d.ownerId)}
                     {d.attachment ? " · PDF attached" : ""}
-                    {returns > 0 ? ` · Returned ${returns === 1 ? "once" : `${returns} times`} before` : ""}
+                    {returns > 0 ? ` · Returned ${returns === 1 ? "once" : `${returns} times`} so far` : ""}
                   </span>
                   {rejection?.reason && (
                     <span className="doc-reason">
